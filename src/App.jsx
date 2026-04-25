@@ -3,6 +3,8 @@ import Nav from "./components/Nav";
 import Home from "./pages/Home";
 import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
+import ActivityLog from "./pages/ActivityLog";
+
 export default function App() {
   return (
     <div className="bg-[#020617] text-slate-200 min-h-screen selection:bg-blue-500/30 font-sans">
@@ -24,6 +26,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/expenses" element={<Expenses />} />
+          <Route path="/logs" element={<ActivityLog />} />
           {/* เพิ่มหน้าอื่นๆ ที่นี่ */}
         </Routes>
       </main>
