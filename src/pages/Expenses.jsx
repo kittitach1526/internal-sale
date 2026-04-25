@@ -17,7 +17,7 @@ export default function Expenses() {
   ];
 
   return (
-    <div className="max-w-[1600px] mx-auto px-6 pt-6 animate-in fade-in duration-700">
+    <div className="max-w-7xl mx-auto px-6 pt-6 animate-in fade-in duration-700">
       
       {/* --- Header: Time Selection & Actions --- */}
       <div className="flex flex-col gap-6 mb-6">

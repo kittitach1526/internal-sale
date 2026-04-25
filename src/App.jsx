@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import ActivityLog from "./pages/ActivityLog";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/sales" element={<Sales />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/logs" element={<ActivityLog />} />
+          <Route path="/settings" element={<Settings />} />
           {/* เพิ่มหน้าอื่นๆ ที่นี่ */}
         </Routes>
       </main>
