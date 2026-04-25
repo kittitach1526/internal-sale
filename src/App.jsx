@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Nav from "./components/Nav";
 import Home from "./pages/Home";
-
+import Sales from "./pages/Sales";
 export default function App() {
   return (
     <div className="bg-[#020617] text-slate-200 min-h-screen selection:bg-blue-500/30 font-sans">
@@ -21,6 +21,7 @@ export default function App() {
       <main className="relative z-10 pt-4 pb-20">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/sales" element={<Sales />} />
           {/* เพิ่มหน้าอื่นๆ ที่นี่ */}
         </Routes>
       </main>
