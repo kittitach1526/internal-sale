@@ -176,6 +176,42 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
+                
+              ))}
+            </div>
+          )}
+
+          {activeTab === "products" && (
+            <div className="animate-in fade-in duration-500 space-y-10 mt-10">
+              {Object.entries(productCategories).map(([group, items]) => (
+                <div key={group}>
+                  <SectionHeader
+                    title={`หมวดหมู่ ${group}`}
+                    icon={HiOutlineCube}
+                    onAdd={() => {}}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/10 rounded-xl"
+                      >
+                        <span className="text-sm text-slate-300 font-medium">
+                          {item}
+                        </span>
+                        <div className="flex gap-1">
+                          <button className="p-1.5 text-slate-500 hover:text-white">
+                            <HiOutlinePencilAlt size={14} />
+                          </button>
+                          <button className="p-1.5 text-slate-500 hover:text-red-400">
+                            <HiOutlineTrash size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
               ))}
             </div>
           )}
