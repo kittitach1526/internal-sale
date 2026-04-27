@@ -13,6 +13,21 @@ def create_product_fostec(id, name):
         cur.close()
         conn.close()
 
+def get_all_product_fostec():
+    conn, cur = get_cursor(dict_mode=True)
+
+    cur.execute("""
+        SELECT id, name, created_at
+        FROM fostec_product;
+    """)
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return data
+
 def delete_product_fostec(product_id):
     conn, cur = get_cursor(dict_mode=True)
     try:

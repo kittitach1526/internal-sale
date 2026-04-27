@@ -1,0 +1,15 @@
+import axios from "axios";
+
+const API_URL = "http://127.0.0.1:8000/api/fostec_product";
+
+export const getProductCategories = async () => {
+  const res = await axios.get(API_URL);
+  const data = res.data;
+
+  // 🔥 แปลงเป็น format ที่ UI ต้องใช้
+  const grouped = {
+    FOSTEC: data.map((item) => item.name),
+  };
+
+  return grouped;
+};
