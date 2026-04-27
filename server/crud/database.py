@@ -1,4 +1,6 @@
 import psycopg2
+import configparser
+
 
 DB_CONFIG = {
     "host": "localhost",
