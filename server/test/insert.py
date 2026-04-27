@@ -34,7 +34,7 @@ def init_db():
         )
 
         cur.execute(
-            "INSERT INTO users (id, name, group_id,username,password) VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO users (id, name, group_id,username,password) VALUES (%s, %s, %s, %s, %s, %s)",
             (0, "root", 0, "root", "energy2023")
         )
 
