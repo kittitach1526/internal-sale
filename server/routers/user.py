@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from crud.user import (
     create_user_db,
-    get_users_db,
+    get_all_user_db,
     get_user_db,
     update_user_db,
     delete_user_db
@@ -21,7 +21,7 @@ def create_user(id : int ,name: str, username: str,password :str ,group_user : i
 # READ ALL
 @router.get("/")
 def get_users():
-    return get_users_db()
+    return get_all_user_db()
 
 # READ ONE
 @router.get("/{user_name}")

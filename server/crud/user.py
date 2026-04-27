@@ -13,8 +13,20 @@ def create_user_db(id, name, username, password, group_user):
         cur.close()
         conn.close()
 
-def get_users_db():
-    return []
+def get_all_user_db():
+    conn, cur = get_cursor(dict_mode=True)
+
+    cur.execute("""
+        SELECT id, username, name, group_id, created_at
+        FROM users;
+    """)
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return data
 
 def get_user_db(user_name):
     conn, cur = get_cursor(dict_mode=True)
@@ -28,11 +40,18 @@ def get_user_db(user_name):
     return data
 
 def update_user_db(user_name, name, age):
-
-
     return True
 
 def delete_user_db(user_name):
-
+    conn, cur = get_cursor(dict_mode=True)
+    try:
+        cur.execute("DELETE FROM users WHERE username = %s;", (user_name,))
+        conn.commit()
+    except Exception as e:
+        print(e)
+        return False
+    finally:
+        cur.close()
+        conn.close()
 
     return True
