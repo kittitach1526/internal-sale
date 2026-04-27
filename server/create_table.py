@@ -2,7 +2,7 @@ import psycopg2
 
 conn = psycopg2.connect(
     host="localhost",
-    database="sale-internal",
+    database="salesdb",
     user="postgres",
     password="energy2023"
 )
