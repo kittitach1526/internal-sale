@@ -32,8 +32,9 @@ create table if not exists "group_work" (
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
     name VARCHAR(100),
-    age INTEGER,
     group_id INTEGER REFERENCES "group_user"(id),
+    username VARCHAR(100) UNIQUE,
+    password VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
