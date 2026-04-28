@@ -17,8 +17,9 @@ def get_all_user_db():
     conn, cur = get_cursor(dict_mode=True)
 
     cur.execute("""
-        SELECT id, username, name, group_id, created_at
-        FROM users;
+        SELECT id, username, name, group_id, created_at, status
+        FROM users
+        WHERE status = 'active';
     """)
 
     data = cur.fetchall()
@@ -31,7 +32,7 @@ def get_all_user_db():
 def get_user_db(user_name):
     conn, cur = get_cursor(dict_mode=True)
 
-    cur.execute("SELECT * FROM users where username = %s;", (user_name,))
+    cur.execute("SELECT * FROM users where username = %s AND status = 'active';", (user_name,))
     data = cur.fetchall()
 
     cur.close()
@@ -45,7 +46,7 @@ def update_user_db(user_name, name, age):
 def delete_user_db(user_name):
     conn, cur = get_cursor(dict_mode=True)
     try:
-        cur.execute("DELETE FROM users WHERE username = %s;", (user_name,))
+        cur.execute("UPDATE users SET status = 'inactive' WHERE username = %s;", (user_name,))
         conn.commit()
     except Exception as e:
         print(e)

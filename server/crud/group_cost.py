@@ -17,8 +17,9 @@ def get_all_group_cost():
     conn, cur = get_cursor(dict_mode=True)
 
     cur.execute("""
-        SELECT id, name, created_at
-        FROM group_cost;
+        SELECT id, name, created_at, status
+        FROM group_cost
+        WHERE status = 'active';
     """)
 
     data = cur.fetchall()
@@ -31,7 +32,7 @@ def get_all_group_cost():
 def delete_group_cost(group_cost_id):
     conn, cur = get_cursor(dict_mode=True)
     try:
-        cur.execute("DELETE FROM group_cost WHERE id = %s;", (group_cost_id,))
+        cur.execute("UPDATE group_cost SET status = 'inactive' WHERE id = %s;", (group_cost_id,))
         conn.commit()
     except Exception as e:
         print(e)

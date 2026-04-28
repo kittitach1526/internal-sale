@@ -17,8 +17,9 @@ def get_all_measuring_work():
     conn, cur = get_cursor(dict_mode=True)
 
     cur.execute("""
-        SELECT id, name, created_at
-        FROM measuring_work;
+        SELECT id, name, created_at, status
+        FROM measuring_work
+        WHERE status = 'active';
     """)
 
     data = cur.fetchall()
@@ -31,7 +32,7 @@ def get_all_measuring_work():
 def delete_product_measuring(product_id):
     conn, cur = get_cursor(dict_mode=True)
     try:
-        cur.execute("DELETE FROM measuring_work WHERE id = %s;", (product_id,))
+        cur.execute("UPDATE measuring_work SET status = 'inactive' WHERE id = %s;", (product_id,))
         conn.commit()
     except Exception as e:
         print(e)

@@ -25,6 +25,7 @@ def get_all_costs():
                gc.name as category_name
         FROM cost c
         LEFT JOIN group_cost gc ON c.group_cost_id = gc.id
+        WHERE c.status = 'active'
         ORDER BY c.created_at DESC;
     """)
     
@@ -44,7 +45,7 @@ def get_costs_by_category(group_cost_id):
                gc.name as category_name
         FROM cost c
         LEFT JOIN group_cost gc ON c.group_cost_id = gc.id
-        WHERE c.group_cost_id = %s
+        WHERE c.group_cost_id = %s AND c.status = 'active'
         ORDER BY c.created_at DESC;
     """, (group_cost_id,))
     
@@ -75,7 +76,7 @@ def update_cost(cost_id, description, amount, date, note):
 def delete_cost(cost_id):
     conn, cur = get_cursor(dict_mode=True)
     try:
-        cur.execute("DELETE FROM cost WHERE id = %s;", (cost_id,))
+        cur.execute("UPDATE cost SET status = 'inactive' WHERE id = %s;", (cost_id,))
         conn.commit()
         return True
     except Exception as e:
