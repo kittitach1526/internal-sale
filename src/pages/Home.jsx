@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -85,15 +87,15 @@ function ChartCard({ title, income, expense, color = "#3b82f6", data = [] }) {
 
       <div className="relative h-48 w-full mt-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <BarChart data={data}>
             <defs>
               <linearGradient id={`glow-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={color} stopOpacity={0.4} />
               </linearGradient>
               <linearGradient id="glow-expense" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.4} />
               </linearGradient>
             </defs>
             <Tooltip
@@ -122,27 +124,17 @@ function ChartCard({ title, income, expense, color = "#3b82f6", data = [] }) {
               fontSize="10"
               tick={{ fill: "rgba(255,255,255,0.5)" }}
             />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="income"
-              stroke={color}
-              strokeWidth={2}
-              fillOpacity={1}
               fill={`url(#glow-${color.replace("#", "")})`}
-              dot={{ r: 0 }}
-              activeDot={{ r: 4, strokeWidth: 0, fill: "#fff" }}
+              radius={[4, 4, 0, 0]}
             />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="expense"
-              stroke="#ef4444"
-              strokeWidth={2}
-              fillOpacity={1}
               fill="url(#glow-expense)"
-              dot={{ r: 0 }}
-              activeDot={{ r: 4, strokeWidth: 0, fill: "#fff" }}
+              radius={[4, 4, 0, 0]}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
       </div>
 

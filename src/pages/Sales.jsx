@@ -224,6 +224,7 @@ export default function Sales() {
               <tr className="border-b border-white/5">
                 <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">เลขที่บิล</th>
                 <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">ลูกค้า</th>
+                <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">วันที่/เวลา</th>
                 <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">สถานะ</th>
                 <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">จำนวนเงิน</th>
                 <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">จัดการ</th>
@@ -242,6 +243,9 @@ export default function Sales() {
                         <div className="w-8 h-8 bg-white/10 rounded-lg"></div>
                         <div className="h-4 w-32 bg-white/10 rounded"></div>
                       </div>
+                    </td>
+                    <td className="py-4">
+                      <div className="h-4 w-28 bg-white/10 rounded"></div>
                     </td>
                     <td className="py-4">
                       <div className="h-6 w-20 bg-white/10 rounded-full"></div>
@@ -267,6 +271,23 @@ export default function Sales() {
                         <div>
                           <span className="text-sm font-medium text-slate-200">{sale.name}</span>
                           <p className="text-[10px] text-slate-500 mt-0.5">{sale.group_work_name || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-slate-200">
+                          {sale.created_at ? new Date(sale.created_at).toLocaleDateString('th-TH', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          }) : 'N/A'}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {sale.created_at ? new Date(sale.created_at).toLocaleTimeString('th-TH', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : 'N/A'}
                         </div>
                       </div>
                     </td>
@@ -299,7 +320,7 @@ export default function Sales() {
               ) : (
                 // No data state
                 <tr>
-                  <td colSpan="5" className="py-12 text-center">
+                  <td colSpan="6" className="py-12 text-center">
                     <p className="text-slate-500 text-sm">
                       {searchTerm ? 'ไม่พบข้อมูลที่ค้นหา' : 'ไม่มีข้อมูลการขาย'}
                     </p>
