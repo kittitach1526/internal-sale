@@ -33,10 +33,24 @@ class CostUpdate(BaseModel):
 def create_cost_endpoint(cost: CostCreate):
     return create_cost(cost.group_cost_id, cost.description, cost.amount, cost.date, cost.note)
 
-# GET ALL
+# GET all costs
 @router.get("/")
-def get_all_costs_endpoint():
+def get_costs():
     return get_all_costs()
+
+# GET cost statistics by period
+@router.get("/stats/{period}")
+def get_cost_stats(period: str):
+    """Get cost statistics by period (daily, monthly, quarterly, yearly)"""
+    return get_cost_statistics(period)
+
+# GET cost by ID
+@router.get("/{cost_id}")
+def get_cost(cost_id: int):
+    cost = get_cost_by_id(cost_id)
+    if not cost:
+        raise HTTPException(status_code=404, detail="Cost not found")
+    return cost
 
 # GET BY CATEGORY
 @router.get("/category/{group_cost_id}")

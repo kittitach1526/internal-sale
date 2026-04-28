@@ -19,22 +19,30 @@ def create_cost(group_cost_id, description, amount, date, note):
 def get_all_costs():
     conn, cur = get_cursor(dict_mode=True)
     
-    cur.execute("""
-        SELECT c.id, c.group_cost_id, c.name as description, c.price as amount, c.created_at as date, 
-               c.description as note, c.created_at,
-               gc.name as category_name
-        FROM cost c
-        LEFT JOIN group_cost gc ON c.group_cost_id = gc.id
-        WHERE c.status = 'active'
-        ORDER BY c.created_at DESC;
-    """)
-    
-    data = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    
-    return data
+    try:
+        cur.execute("""
+            SELECT c.id, c.group_cost_id, c.name as description, c.price as amount, c.created_at as date, 
+                   c.description as note, c.created_at,
+                   gc.name as category_name
+            FROM cost c
+            LEFT JOIN group_cost gc ON c.group_cost_id = gc.id
+            WHERE c.status = 'active'
+            ORDER BY c.created_at DESC;
+        """)
+        
+        data = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return data
+        
+    except Exception as e:
+        print(f"Error getting costs: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
 
 def get_costs_by_category(group_cost_id):
     conn, cur = get_cursor(dict_mode=True)

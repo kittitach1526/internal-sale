@@ -71,6 +71,82 @@ def update_sales(sales_id, group_work_id, name, price, description):
         cur.close()
         conn.close()
 
+def get_sales_statistics(period='all'):
+    conn, cur = get_cursor(dict_mode=True)
+    
+    try:
+        if period == 'daily':
+            cur.execute("""
+                SELECT 
+                    DATE(created_at) as date,
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(price), 0) as total_revenue
+                FROM sales 
+                WHERE status = 'active' 
+                  AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY DATE(created_at)
+                ORDER BY date DESC
+            """)
+        elif period == 'monthly':
+            cur.execute("""
+                SELECT 
+                    DATE_TRUNC('month', created_at)::date as month,
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(price), 0) as total_revenue
+                FROM sales 
+                WHERE status = 'active' 
+                  AND created_at >= CURRENT_DATE - INTERVAL '12 months'
+                GROUP BY DATE_TRUNC('month', created_at)
+                ORDER BY month DESC
+            """)
+        elif period == 'quarterly':
+            cur.execute("""
+                SELECT 
+                    DATE_TRUNC('quarter', created_at)::date as quarter,
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(price), 0) as total_revenue
+                FROM sales 
+                WHERE status = 'active' 
+                  AND created_at >= CURRENT_DATE - INTERVAL '2 years'
+                GROUP BY DATE_TRUNC('quarter', created_at)
+                ORDER BY quarter DESC
+            """)
+        elif period == 'yearly':
+            cur.execute("""
+                SELECT 
+                    DATE_TRUNC('year', created_at)::date as year,
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(price), 0) as total_revenue
+                FROM sales 
+                WHERE status = 'active' 
+                  AND created_at >= CURRENT_DATE - INTERVAL '5 years'
+                GROUP BY DATE_TRUNC('year', created_at)
+                ORDER BY year DESC
+            """)
+        else:  # all
+            cur.execute("""
+                SELECT 
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(price), 0) as total_revenue,
+                    COALESCE(AVG(price), 0) as avg_price,
+                    MIN(created_at) as first_sale,
+                    MAX(created_at) as last_sale
+                FROM sales 
+                WHERE status = 'active'
+            """)
+            stats = cur.fetchone()
+            return stats
+        
+        data = cur.fetchall()
+        return data
+        
+    except Exception as e:
+        print(f"Error getting sales statistics: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
 def delete_sales(sales_id):
     conn, cur = get_cursor(dict_mode=True)
     try:
