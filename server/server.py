@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import uvicorn
-from routers import user, fostec_product
+from routers import user, fostec_product,measuring_work, group_cost
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 app.add_middleware(
@@ -15,8 +15,10 @@ app.add_middleware(
 # include router
 app.include_router(user.router, prefix="/api")
 app.include_router(fostec_product.router, prefix="/api")
+app.include_router(measuring_work.router, prefix="/api")
+app.include_router(group_cost.router, prefix="/api")
 
-# run server
+# run servers
 if __name__ == "__main__":
     uvicorn.run(
         "server:app",

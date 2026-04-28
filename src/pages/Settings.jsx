@@ -11,12 +11,18 @@ import {
 
 import { getUsers } from "../services/user_api";
 import { getProductCategories } from "../services/productService";
+import { getProductCategories2 } from "../services/productService";
+import { getGroupCost } from "../services/group_cost";
+
 
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("users");
   const [productCategories, setProductCategories] = useState({});
+  const [productCategories2, setProductCategories2] = useState({});
   const [users, setUsers] = useState([]);
+  // const [group_cost, setGroupCost] = useState([]);
+  const [expenseCategories, setExpenseCategories] = useState([]);
 
   // --- Mock Data States (ในงานจริงส่วนนี้จะมาจาก API) ---
   useEffect(() => {
@@ -27,6 +33,14 @@ export default function Settings() {
     getProductCategories()
       .then((data) => setProductCategories(data))
       .catch((err) => console.error(err));
+
+    getProductCategories2()
+      .then((data) => setProductCategories2(data))
+      .catch((err) => console.error(err));
+
+    getGroupCost()
+      .then((res) => setExpenseCategories(res.data))
+      .catch((err) => console.error(err));
   }, []);
 
   // const [productCategories, setProductCategories] = useState({
@@ -34,13 +48,7 @@ export default function Settings() {
   //   งานตรวจวัด: ["ตู้โหลด", "ความร้อน", "แสงสว่าง"],
   // });
 
-  const [expenseCategories, setExpenseCategories] = useState([
-    "Fix cost",
-    "ค่าใช้จ่ายสำนักงาน",
-    "ค่าเช่า",
-    "ค่าน้ำมัน",
-    "ค่าใช้จ่ายใน Job งาน",
-  ]);
+
 
   // --- UI Components ---
   const SectionHeader = ({ title, onAdd, icon: Icon }) => (
@@ -86,10 +94,9 @@ export default function Settings() {
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap
-                ${
-                  activeTab === item.id
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                ${activeTab === item.id
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 }`}
             >
               <item.icon size={20} />
@@ -106,7 +113,7 @@ export default function Settings() {
               <SectionHeader
                 title="จัดการสิทธิ์การเข้าใช้งาน"
                 icon={HiOutlineShieldCheck}
-                onAdd={() => {}}
+                onAdd={() => { }}
               />
               <div className="grid gap-4">
                 {users.map((user) => (
@@ -153,7 +160,7 @@ export default function Settings() {
                   <SectionHeader
                     title={`หมวดหมู่ ${group}`}
                     icon={HiOutlineCube}
-                    onAdd={() => {}}
+                    onAdd={() => { }}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
@@ -176,19 +183,19 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
-                
+
               ))}
             </div>
           )}
 
           {activeTab === "products" && (
             <div className="animate-in fade-in duration-500 space-y-10 mt-10">
-              {Object.entries(productCategories).map(([group, items]) => (
+              {Object.entries(productCategories2).map(([group, items]) => (
                 <div key={group}>
                   <SectionHeader
                     title={`หมวดหมู่ ${group}`}
                     icon={HiOutlineCube}
-                    onAdd={() => {}}
+                    onAdd={() => { }}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
@@ -211,7 +218,7 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
-                
+
               ))}
             </div>
           )}
@@ -222,20 +229,23 @@ export default function Settings() {
               <SectionHeader
                 title="จัดการหมวดหมู่ค่าใช้จ่าย"
                 icon={HiOutlineCash}
-                onAdd={() => {}}
+                onAdd={() => { }}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {expenseCategories.map((cat, index) => (
                   <div
-                    key={index}
+                    key={cat.id || index} // แนะนำให้ใช้ cat.id เป็น key แทน index เพื่อ Performance ที่ดีกว่า
                     className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                       <span className="text-sm text-slate-200 font-bold">
-                        {cat}
+                        {/* แก้จาก {cat} เป็น {cat.name} */}
+                        {cat.name}
                       </span>
                     </div>
+
+                    {/* ... ส่วนปุ่มแก้ไข/ลบ เหมือนเดิม ... */}
                     <div className="flex gap-2">
                       <button className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg">
                         <HiOutlinePencilAlt size={16} />
