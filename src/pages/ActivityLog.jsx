@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   HiOutlineSearch, 
   HiOutlineFilter, 
@@ -8,24 +8,69 @@ import {
   HiOutlineCheckCircle,
   HiOutlineInformationCircle 
 } from "react-icons/hi";
+import { getLogs, getLogsWithPagination } from "../services/logs";
 
 export default function ActivityLog() {
   // --- States ---
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 4; // จำนวนรายการต่อ 1 หน้า
+  const [allLogs, setAllLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // --- ข้อมูลจำลองสำหรับ Log (Mock Data) ---
-  const allLogs = [
-    { id: 1, type: "success", user: "Somchai S.", action: "เข้าสู่ระบบ", detail: "Login สำเร็จผ่าน Chrome (Mac OS)", time: "14:30:25", date: "25 เม.ย. 2569" },
-    { id: 2, type: "warning", user: "Admin", action: "แก้ไขค่าใช้จ่าย", detail: "แก้ไขรายการในหมวด Fix cost (#EX-992)", time: "13:15:10", date: "25 เม.ย. 2569" },
-    { id: 3, type: "info", user: "System", action: "สำรองข้อมูล", detail: "ระบบทำการ Backup Database อัตโนมัติ", time: "12:00:00", date: "25 เม.ย. 2569" },
-    { id: 4, type: "error", user: "Unknown", action: "พยายามเข้าสู่ระบบ", detail: "รหัสผ่านไม่ถูกต้อง 3 ครั้งต่อเนื่อง (IP: 192.168.1.50)", time: "11:45:22", date: "25 เม.ย. 2569" },
-    { id: 5, type: "success", user: "Somchai S.", action: "เพิ่มข้อมูล", detail: "เพิ่มรายการยอดขายใหม่ (#INV-2026-005)", time: "10:20:05", date: "25 เม.ย. 2569" },
-    { id: 6, type: "info", user: "Admin", action: "พิมพ์รายงาน", detail: "ส่งออกรายงานยอดขายประจำเดือนเมษายน (PDF)", time: "09:45:12", date: "25 เม.ย. 2569" },
-    { id: 7, type: "warning", user: "System", action: "แจ้งเตือนพื้นที่", detail: "พื้นที่จัดเก็บข้อมูลใกล้เต็ม (85%)", time: "08:30:00", date: "25 เม.ย. 2569" },
-    { id: 8, type: "success", user: "Wichai K.", action: "เข้าสู่ระบบ", detail: "Login สำเร็จผ่าน Mobile App (iOS)", time: "07:15:44", date: "25 เม.ย. 2569" },
+  // Fallback data สำหรับกรณี server ไม่ทำงาน
+  const fallbackLogs = [
+    { id: 1, type: "info", user: "System", action: "ระบบ", detail: "กำลังเชื่อมต่อกับเซิร์ฟเวอร์ logs...", time: new Date().toLocaleTimeString('th-TH', { hour12: false }), date: new Date().toLocaleDateString('th-TH') },
+    { id: 2, type: "warning", user: "System", action: "แจ้งเตือน", detail: "เซิร์ฟเวอร์ยังไม่พร้อมใช้งาน (localhost:5000)", time: new Date().toLocaleTimeString('th-TH', { hour12: false }), date: new Date().toLocaleDateString('th-TH') },
+    { id: 3, type: "info", user: "System", action: "ข้อมูล", detail: "ระบบจะแสดงข้อมูลจริงเมื่อเซิร์ฟเวอร์เริ่มทำงาน", time: new Date().toLocaleTimeString('th-TH', { hour12: false }), date: new Date().toLocaleDateString('th-TH') }
   ];
+
+  // Mock data สำหรับทดสอบ UI ชั่วคราว
+  const mockLogs = [
+    { id: 1, type: "success", user: "Somchai S.", action: "เข้าสู่ระบบ", detail: "Login สำเร็จผ่าน Chrome (Windows)", time: "14:30:25", date: "28 เม.ย. 2569" },
+    { id: 2, type: "warning", user: "Admin", action: "แก้ไขค่าใช้จ่าย", detail: "แก้ไขรายการในหมวดค่าใช้จ่าย (#EX-123)", time: "13:15:10", date: "28 เม.ย. 2569" },
+    { id: 3, type: "info", user: "System", action: "สำรองข้อมูล", detail: "ระบบทำการ Backup Database อัตโนมัติสำเร็จ", time: "12:00:00", date: "28 เม.ย. 2569" },
+    { id: 4, type: "error", user: "Unknown", action: "พยายามเข้าสู่ระบบ", detail: "รหัสผ่านไม่ถูกต้อง 3 ครั้งต่อเนื่อง (IP: 192.168.1.50)", time: "11:45:22", date: "28 เม.ย. 2569" },
+    { id: 5, type: "success", user: "Somchai S.", action: "เพิ่มข้อมูล", detail: "เพิ่มรายการยอดขายใหม่ (#INV-2026-005)", time: "10:20:05", date: "28 เม.ย. 2569" },
+    { id: 6, type: "info", user: "Admin", action: "พิมพ์รายงาน", detail: "ส่งออกรายงานยอดขายประจำเดือนเมษายน (PDF)", time: "09:45:12", date: "28 เม.ย. 2569" },
+    { id: 7, type: "warning", user: "System", action: "แจ้งเตือนพื้นที่", detail: "พื้นที่จัดเก็บข้อมูลใกล้เต็ม (85%)", time: "08:30:00", date: "28 เม.ย. 2569" },
+    { id: 8, type: "success", user: "Wichai K.", action: "เข้าสู่ระบบ", detail: "Login สำเร็จผ่าน Mobile App (iOS)", time: "07:15:44", date: "28 เม.ย. 2569" },
+    { id: 9, type: "error", user: "Unknown", action: "ถูกปฏิเสธการเข้าถึง", detail: "พยายามเข้าถึงหน้า /logs โดยไม่มีสิทธิ (IP: 192.168.1.100)", time: "06:30:15", date: "28 เม.ย. 2569" },
+    { id: 10, type: "info", user: "System", action: "รีสตาร์ทระบบ", detail: "ระบบทำการรีสตาร์ทเพื่ออัปเดต", time: "02:00:00", date: "28 เม.ย. 2569" }
+  ];
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
+        const response = await getLogs();
+        setAllLogs(response.data || []);
+        setError("");
+      } catch (err) {
+        console.error('Error fetching logs:', err);
+        // ถ้าเป็น Network Error ให้ใช้ fallback data แทน
+        const isNetworkError = err.code === 'NETWORK_ERROR' || 
+                              err.message?.includes('Network Error') || 
+                              err.code === 'ERR_CONNECTION_REFUSED' || 
+                              err.name === 'AxiosError' ||
+                              err.message?.includes('ERR_CONNECTION_REFUSED') ||
+                              !err.response; // ถ้าไม่มี response แสดงว่าเป็น network error
+        
+        if (isNetworkError) {
+          setAllLogs(fallbackLogs);
+          setError("เซิร์ฟเวอร์ logs ยังไม่พร้อม - แสดงข้อมูลตัวอย่าง");
+        } else {
+          setError("ไม่สามารถดึงข้อมูล logs ได้");
+          setAllLogs([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, []);
 
   // --- Logic 1: การค้นหา (Filtering) ---
   const filteredLogs = allLogs.filter(log => 
@@ -94,12 +139,56 @@ export default function ActivityLog() {
             <HiOutlineFilter size={18} />
             ตัวกรอง
           </button>
+          {error && (
+            <button 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 px-5 py-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl text-sm font-bold hover:bg-blue-500/20 transition-all"
+            >
+              <HiOutlineSearch size={18} />
+              รีเฟรชข้อมูล
+            </button>
+          )}
         </div>
       </header>
 
       {/* --- Log Items List --- */}
       <div className="space-y-4 mb-12">
-        {currentLogs.length > 0 ? (
+        {loading ? (
+          // Loading skeleton
+          Array.from({ length: logsPerPage }).map((_, index) => (
+            <div key={`skeleton-${index}`} className="animate-pulse">
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-white/[0.02] border border-white/5 rounded-[2rem]">
+                <div className="flex items-center gap-5">
+                  <div className="w-10 h-10 bg-white/10 rounded-full"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-4 w-16 bg-white/10 rounded"></div>
+                      <div className="h-4 w-24 bg-white/10 rounded"></div>
+                    </div>
+                    <div className="h-4 w-48 bg-white/10 rounded"></div>
+                  </div>
+                </div>
+                <div className="mt-5 md:mt-0 pt-4 md:pt-0 border-t md:border-none border-white/5 text-left md:text-right shrink-0">
+                  <div className="h-4 w-20 bg-white/10 rounded ml-auto"></div>
+                  <div className="h-3 w-16 bg-white/10 rounded ml-auto mt-1"></div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : error ? (
+          // Error state
+          <div className="py-20 text-center bg-red-500/5 border border-red-500/20 rounded-[2rem]">
+            <HiOutlineExclamation className="text-red-400 mx-auto mb-4" size={48} />
+            <p className="text-red-400 font-bold">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-sm font-bold hover:bg-red-500/30 transition-all"
+            >
+              ลองใหม่
+            </button>
+          </div>
+        ) : currentLogs.length > 0 ? (
+          // Real data
           currentLogs.map((log) => {
             const style = getLogStyle(log.type);
             return (
@@ -139,8 +228,12 @@ export default function ActivityLog() {
             )
           })
         ) : (
+          // No data state
           <div className="py-20 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-[2rem]">
-            <p className="text-slate-500 font-bold italic">ไม่พบข้อมูลที่คุณค้นหา...</p>
+            <HiDatabase className="text-slate-500 mx-auto mb-4" size={48} />
+            <p className="text-slate-500 font-bold italic">
+              {searchTerm ? 'ไม่พบข้อมูลที่คุณค้นหา...' : 'ยังไม่มีข้อมูล logs ในระบบ'}
+            </p>
           </div>
         )}
       </div>

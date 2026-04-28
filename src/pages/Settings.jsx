@@ -9,6 +9,7 @@ import {
   HiOutlineShieldCheck,
   HiOutlineX,
 } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 
 import { getUsers, createUser, updateUser, deleteUser } from "../services/user_api";
 import { getProductCategories, getProductCategories2, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
@@ -17,6 +18,7 @@ import { getGroupCost, createGroupCost, deleteGroupCost, updateGroupCost } from 
 
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("users");
   const [productCategories, setProductCategories] = useState({});
   const [productCategories2, setProductCategories2] = useState({});
@@ -146,7 +148,7 @@ export default function Settings() {
   };
 
   const handleSaveProduct = () => {
-    if (!productForm.name.trim()) return;
+    if (!productForm.name.trim() || !productForm.id.trim()) return;
 
     if (productType === "FOSTEC") {
       if (editingProduct) {
@@ -159,7 +161,7 @@ export default function Settings() {
         setShowProductModal(false);
       } else {
         // Add new FOSTEC product
-        createFostecProduct(productForm.name)
+        createFostecProduct(productForm.id, productForm.name)
           .then(() => {
             const updatedCategories = { ...productCategories };
             updatedCategories.FOSTEC = [...(updatedCategories.FOSTEC || []), productForm.name];
@@ -180,7 +182,7 @@ export default function Settings() {
         setShowProductModal(false);
       } else {
         // Add new measuring work
-        createMeasuringWork(productForm.name)
+        createMeasuringWork(productForm.id, productForm.name)
           .then(() => {
             const updatedCategories = { ...productCategories2 };
             updatedCategories["งานตรวจรับ"] = [...(updatedCategories["งานตรวจรับ"] || []), productForm.name];
@@ -194,9 +196,7 @@ export default function Settings() {
 
   // User Management Handlers
   const handleAddUser = () => {
-    setEditingUser(null);
-    setUserForm({ id: "", name: "", email: "", role: "" });
-    setShowUserModal(true);
+    navigate('/add-user');
   };
 
   const handleEditUser = (user) => {

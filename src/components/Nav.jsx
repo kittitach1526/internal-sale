@@ -2,17 +2,30 @@ import { useState, useEffect, useRef } from "react";
 // ใช้ไอคอนที่มีชัวร์ๆ ในชุด hi
 import { HiOutlineBell, HiOutlineChevronDown, HiOutlineUser, HiOutlineLogout, HiOutlineAdjustments } from "react-icons/hi";
 import logo from '../assets/logo.png'
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { isAdminOrRoot, getCurrentUser } from '../utils/auth';
+import { logLogout } from '../utils/logger';
 
 export default function Nav() {
 
-const menuItems = [
-    { name: "ภาพรวม", path: "/" },
-    { name: "ยอดขาย", path: "/sales" },
-    { name: "ค่าใช้จ่าย", path: "/expenses" },
-    { name: "Log ระบบ", path: "/logs" },
-    { name: "ตั้งค่า", path: "/settings" },
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // กรองเมนูตามสิทธิ์ผู้ใช้
+  const allMenuItems = [
+    { name: "ภาพรวม", path: "/", adminOnly: false },
+    { name: "ยอดขาย", path: "/sales", adminOnly: false },
+    { name: "ค่าใช้จ่าย", path: "/expenses", adminOnly: false },
+    { name: "Log ระบบ", path: "/logs", adminOnly: true },
+    { name: "ตั้งค่า", path: "/settings", adminOnly: true },
   ];
+
+  const menuItems = allMenuItems.filter(item => {
+    // ถ้าไม่ต้องการสิทธิ์ admin ให้แสดงเสมอ
+    if (!item.adminOnly) return true;
+    // ถ้าต้องการสิทธิ์ admin ให้ตรวจสอบว่าเป็น admin/root หรือไม่
+    return isAdminOrRoot();
+  });
 
   const [time, setTime] = useState(new Date());
   const [isOpen, setIsOpen] = useState(false); // State สำหรับเปิด-ปิดเมนู
@@ -31,6 +44,25 @@ const menuItems = [
     document.addEventListener("mousedown", closeMenu);
     return () => document.removeEventListener("mousedown", closeMenu);
   }, []);
+
+  // ฟังก์ชันออกจากระบบ
+  const handleLogout = async () => {
+    // ดึงข้อมูลผู้ใช้ก่อนลบ
+    const currentUser = getCurrentUser();
+    
+    // บันทึก log การออกจากระบบ
+    await logLogout(currentUser);
+    
+    // ลบข้อมูลผู้ใช้จาก localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    
+    // ปิดเมนู dropdown
+    setIsOpen(false);
+    
+    // ไปหน้า login
+    navigate('/login');
+  };
 
   return (
     <nav className="border-b border-white/5 bg-slate-950/60 backdrop-blur-xl relative z-50">
@@ -86,7 +118,10 @@ const menuItems = [
                       <HiOutlineAdjustments size={18} /> ตั้งค่า
                     </button>
                     <div className="h-px bg-white/5 my-1" />
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all font-bold">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all font-bold"
+                    >
                       <HiOutlineLogout size={18} /> ออกจากระบบ
                     </button>
                   </div>

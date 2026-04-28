@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { HiOutlinePlus, HiOutlineChevronDown } from "react-icons/hi2";
+import { getCosts, createCost, updateCost, deleteCost } from "../services/cost";
 import { getGroupCost } from "../services/group_cost";
+import { HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronDown } from "react-icons/hi";
+import { isAdminOrRoot } from "../utils/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function Expenses() {
+  const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState("รายเดือน");
   const [quarter, setQuarter] = useState("Q1");
   const [expenseCategories, setExpenseCategories] = useState([]);
+  const [expenseRecords, setExpenseRecords] = useState([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenseForm, setExpenseForm] = useState({
+    group_cost_id: "",
+    description: "",
+    amount: "",
+    date: "",
+    note: ""
+  });
 
   const periods = ["รายวัน", "รายเดือน", "รายไตรมาส", "รายปี"];
   
@@ -37,6 +51,138 @@ export default function Expenses() {
       })
       .catch((err) => console.error(err));
   }, []);
+
+  // Fetch expense records
+  useEffect(() => {
+    getCosts()
+      .then((res) => {
+        setExpenseRecords(res.data);
+        // Calculate totals for each category
+        const categoryTotals = {};
+        res.data.forEach(record => {
+          if (!categoryTotals[record.group_cost_id]) {
+            categoryTotals[record.group_cost_id] = 0;
+          }
+          categoryTotals[record.group_cost_id] += parseFloat(record.amount);
+        });
+        
+        // Update category totals
+        setExpenseCategories(prev => prev.map(cat => ({
+          ...cat,
+          total: (categoryTotals[cat.id] || 0).toFixed(2)
+        })));
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  // Handler functions
+  const handleAddExpense = () => {
+    // ตรวจสอบสิทธิ์ก่อนเพิ่มข้อมูล
+    if (!isAdminOrRoot()) {
+      alert('ไม่มีสิทธิ์เพิ่มรายการค่าใช้จ่าย\nต้องเป็นผู้ดูแลระบบเท่านั้น');
+      return;
+    }
+    navigate('/add-expense');
+  };
+
+  const handleEditExpense = (record) => {
+    setEditingExpense(record);
+    setExpenseForm({
+      group_cost_id: record.group_cost_id.toString(),
+      description: record.description,
+      amount: record.amount.toString(),
+      date: record.date,
+      note: record.note || ""
+    });
+    setShowExpenseModal(true);
+  };
+
+  const handleDeleteExpense = (record) => {
+    if (window.confirm(`คุณต้องการลบรายการ "${record.description}" ใช่หรือไม่?`)) {
+      deleteCost(record.id)
+        .then(() => {
+          setExpenseRecords(prev => prev.filter(r => r.id !== record.id));
+          // Recalculate category totals
+          const updatedRecords = expenseRecords.filter(r => r.id !== record.id);
+          const categoryTotals = {};
+          updatedRecords.forEach(r => {
+            if (!categoryTotals[r.group_cost_id]) {
+              categoryTotals[r.group_cost_id] = 0;
+            }
+            categoryTotals[r.group_cost_id] += parseFloat(r.amount);
+          });
+          setExpenseCategories(prev => prev.map(cat => ({
+            ...cat,
+            total: (categoryTotals[cat.id] || 0).toFixed(2)
+          })));
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const handleSaveExpense = () => {
+    if (!expenseForm.group_cost_id || !expenseForm.description || !expenseForm.amount || !expenseForm.date) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    const expenseData = {
+      group_cost_id: parseInt(expenseForm.group_cost_id),
+      description: expenseForm.description,
+      amount: parseFloat(expenseForm.amount),
+      date: expenseForm.date,
+      note: expenseForm.note
+    };
+
+    if (editingExpense) {
+      // Update existing expense
+      updateCost(editingExpense.id, expenseData)
+        .then(() => {
+          setExpenseRecords(prev => prev.map(r => 
+            r.id === editingExpense.id ? { ...r, ...expenseData } : r
+          ));
+          setShowExpenseModal(false);
+          // Refresh data to recalculate totals
+          getCosts().then((res) => {
+            setExpenseRecords(res.data);
+            const categoryTotals = {};
+            res.data.forEach(record => {
+              if (!categoryTotals[record.group_cost_id]) {
+                categoryTotals[record.group_cost_id] = 0;
+              }
+              categoryTotals[record.group_cost_id] += parseFloat(record.amount);
+            });
+            setExpenseCategories(prev => prev.map(cat => ({
+              ...cat,
+              total: (categoryTotals[cat.id] || 0).toFixed(2)
+            })));
+          });
+        })
+        .catch((err) => console.error(err));
+    } else {
+      // Add new expense
+      createCost(expenseData)
+        .then(() => {
+          setShowExpenseModal(false);
+          // Refresh data to get the new record and recalculate totals
+          getCosts().then((res) => {
+            setExpenseRecords(res.data);
+            const categoryTotals = {};
+            res.data.forEach(record => {
+              if (!categoryTotals[record.group_cost_id]) {
+                categoryTotals[record.group_cost_id] = 0;
+              }
+              categoryTotals[record.group_cost_id] += parseFloat(record.amount);
+            });
+            setExpenseCategories(prev => prev.map(cat => ({
+              ...cat,
+              total: (categoryTotals[cat.id] || 0).toFixed(2)
+            })));
+          });
+        })
+        .catch((err) => console.error(err));
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-6 animate-in fade-in duration-700">
@@ -84,7 +230,10 @@ export default function Expenses() {
         </div>
 
         {/* ปุ่มเพิ่มรายการ */}
-        <button className="flex items-center gap-2 w-fit px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg hover:bg-emerald-500/20 transition-all active:scale-95">
+        <button 
+          onClick={handleAddExpense}
+          className="flex items-center gap-2 w-fit px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg hover:bg-emerald-500/20 transition-all active:scale-95"
+        >
           <HiOutlinePlus size={16} />
           เพิ่มรายการค่าใช้จ่าย
         </button>
@@ -115,21 +264,157 @@ export default function Expenses() {
                     <th className="px-6 py-3 font-medium text-center">วันที่</th>
                     <th className="px-6 py-3 font-medium text-right">จำนวนเงิน (฿)</th>
                     <th className="px-6 py-3 font-medium text-right">หมายเหตุ</th>
+                    <th className="px-6 py-3 font-medium text-center">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {/* สถานะไม่มีข้อมูลตามรูป */}
-                  <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-slate-600 text-sm italic font-medium">
-                      ไม่มีข้อมูล
-                    </td>
-                  </tr>
+                  {expenseRecords
+                    .filter(record => record.group_cost_id === category.id)
+                    .map((record) => (
+                      <tr key={record.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-3 text-sm text-slate-300">
+                          {record.description}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-400 text-center">
+                          {record.date}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-300 text-right font-medium">
+                          {parseFloat(record.amount).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-400 text-right">
+                          {record.note || "-"}
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <button 
+                              onClick={() => handleEditExpense(record)}
+                              className="p-1.5 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                            >
+                              <HiOutlinePencilAlt size={14} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteExpense(record)}
+                              className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                            >
+                              <HiOutlineTrash size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  {expenseRecords.filter(record => record.group_cost_id === category.id).length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-10 text-center text-slate-600 text-sm italic font-medium">
+                        ไม่มีข้อมูล
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingExpense ? "แก้ไขรายการค่าใช้จ่าย" : "เพิ่มรายการค่าใช้จ่าย"}
+              </h3>
+              <button
+                onClick={() => setShowExpenseModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <HiOutlineX size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  หมวดหมู่
+                </label>
+                <select
+                  value={expenseForm.group_cost_id}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, group_cost_id: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                >
+                  <option value="" className="bg-slate-800">เลือกหมวดหมู่</option>
+                  {expenseCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id} className="bg-slate-800">
+                      {cat.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  รายละเอียด
+                </label>
+                <input
+                  type="text"
+                  value={expenseForm.description}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอกรายละเอียดค่าใช้จ่าย"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  จำนวนเงิน
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอกจำนวนเงิน"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  วันที่
+                </label>
+                <input
+                  type="date"
+                  value={expenseForm.date}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  หมายเหตุ
+                </label>
+                <textarea
+                  value={expenseForm.note}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, note: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10 resize-none"
+                  placeholder="กรอกหมายเหตุ (ถ้ามี)"
+                  rows="3"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowExpenseModal(false)}
+                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleSaveExpense}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  {editingExpense ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

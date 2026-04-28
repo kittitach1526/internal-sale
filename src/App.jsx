@@ -1,12 +1,20 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Nav from "./components/Nav";
+import ProtectedRoute, { AccessDeniedMessage } from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Sales from "./pages/Sales";
+import AddSale from "./pages/AddSale";
 import Expenses from "./pages/Expenses";
+import AddExpense from "./pages/AddExpense";
 import ActivityLog from "./pages/ActivityLog";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import AddUser from "./pages/AddUser";
 
 export default function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   return (
     <div className="bg-[#020617] text-slate-200 min-h-screen selection:bg-blue-500/30 font-sans">
       
@@ -17,18 +25,60 @@ export default function App() {
       </div>
 
       {/* Navigation: ติดหนึบด้านบน */}
-      <div className="sticky top-0 z-50">
-        <Nav />
-      </div>
+      {!isLoginPage && (
+        <div className="sticky top-0 z-50">
+          <Nav />
+        </div>
+      )}
 
       {/* Main Content */}
-      <main className="relative z-10 pt-4 pb-20">
+      <main className={`relative z-10 ${isLoginPage ? '' : 'pt-4 pb-20'}`}>
+        <AccessDeniedMessage />
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Home />} />
           <Route path="/sales" element={<Sales />} />
+          <Route 
+            path="/add-sale" 
+            element={
+              <ProtectedRoute pageName="AddSale">
+                <AddSale />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/expenses" element={<Expenses />} />
-          <Route path="/logs" element={<ActivityLog />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route 
+            path="/add-expense" 
+            element={
+              <ProtectedRoute pageName="AddExpense">
+                <AddExpense />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/logs" 
+            element={
+              <ProtectedRoute pageName="ActivityLog">
+                <ActivityLog />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute pageName="Settings">
+                <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/add-user" 
+            element={
+              <ProtectedRoute pageName="AddUser">
+                <AddUser />
+              </ProtectedRoute>
+            } 
+          />
           {/* เพิ่มหน้าอื่นๆ ที่นี่ */}
         </Routes>
       </main>
