@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from crud.group_cost import (
     create_group_cost,
@@ -7,6 +8,13 @@ from crud.group_cost import (
     update_group_cost
 )
 
+class GroupCostCreate(BaseModel):
+    id: int
+    name: str
+
+class GroupCostUpdate(BaseModel):
+    name: str
+
 router = APIRouter(
     prefix="/group_cost",
     tags=["group_cost"]
@@ -14,8 +22,8 @@ router = APIRouter(
 
 # CREATE
 @router.post("/")
-def create_group_cost_endpoint(id : int ,name: str):
-    return create_group_cost(id, name)
+def create_group_cost_endpoint(group_cost: GroupCostCreate):
+    return create_group_cost(group_cost.id, group_cost.name)
 
 @router.get("/")
 def get_all_group_cost_endpoint():
@@ -28,5 +36,5 @@ def delete_group_cost_endpoint(group_cost_id: int):
 
 # UPDATE
 @router.put("/{group_cost_id}")
-def update_group_cost_endpoint(group_cost_id: int, name: str):
-    return update_group_cost(group_cost_id, name)
+def update_group_cost_endpoint(group_cost_id: int, group_cost: GroupCostUpdate):
+    return update_group_cost(group_cost_id, group_cost.name)
