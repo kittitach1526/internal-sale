@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
-import sqlite3
+import psycopg2
 import os
+from psycopg2.extras import RealDictCursor
 
 router = APIRouter()
 
@@ -28,36 +29,27 @@ class LogResponse(BaseModel):
     date: str
     time: str
 
-# Database setup
+# Database configuration
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'database': os.getenv('DB_NAME', 'salesdb'),
+    'user': os.getenv('DB_USER', 'postgres'),
+    'password': os.getenv('DB_PASSWORD', 'energy2023'),
+    'port': os.getenv('DB_PORT', '5432')
+}
+
 def get_db_connection():
-    # Path ไปยัง database ในโฟลเดอร์ server
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'database.db')
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """สร้างการเชื่อมต่อฐานข้อมูล PostgreSQL"""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        return conn
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
 def init_logs_table():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # สร้างตาราง logs ถ้ายังไม่มี
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user TEXT NOT NULL,
-            action TEXT NOT NULL,
-            detail TEXT NOT NULL,
-            type TEXT DEFAULT 'info',
-            ip TEXT,
-            user_agent TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            date TEXT,
-            time TEXT
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    """ตรวจสอบว่าตาราง logs มีอยู่แล้วใน PostgreSQL"""
+    # ตาราง logs ถูกสร้างไว้แล้วใน init_database.py
+    pass
 
 # Initialize table on module import
 init_logs_table()
@@ -65,28 +57,25 @@ init_logs_table()
 @router.post("/logs", response_model=dict)
 async def create_log(log: LogEntry):
     """สร้าง log entry ใหม่"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         # ดึงข้อมูล IP และ User Agent ถ้าไม่ได้ส่งมา
         ip = log.ip or "127.0.0.1"
         user_agent = log.user_agent or "Unknown"
         
         # สร้าง timestamp ปัจจุบัน
         now = datetime.now()
-        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-        date = now.strftime("%d %b %Y")
-        time = now.strftime("%H:%M:%S")
         
         cursor.execute('''
-            INSERT INTO logs (user, action, detail, type, ip, user_agent, timestamp, date, time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (log.user, log.action, log.detail, log.type, ip, user_agent, timestamp, date, time))
+            INSERT INTO logs (user_id, action)
+            VALUES (%s, %s)
+            RETURNING id
+        ''', (1, log.action))  # user_id=1 ชั่วคราว จะปรับให้ใช้ user จริงภายหลัง
         
-        log_id = cursor.lastrowid
+        log_id = cursor.fetchone()[0]
         conn.commit()
-        conn.close()
         
         return {
             "success": True,
@@ -95,7 +84,11 @@ async def create_log(log: LogEntry):
         }
         
     except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create log: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
 
 @router.get("/logs", response_model=dict)
 async def get_logs(
@@ -104,21 +97,21 @@ async def get_logs(
     q: Optional[str] = Query(None)
 ):
     """ดึงข้อมูล logs ทั้งหมด"""
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         # สร้าง query พื้นฐาน
         query = "SELECT * FROM logs"
         params = []
         
-        # เพิ่มการค้นหาถ้ามี
+        # เพิ่มการค้นหาถ้ามี (ค้นหาใน action)
         if q:
-            query += " WHERE user LIKE ? OR action LIKE ? OR detail LIKE ?"
-            params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
+            query += " WHERE action ILIKE %s"
+            params.append(f"%{q}%")
         
         # เพิ่มการเรียงลำดับและ pagination
-        query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, (page - 1) * limit])
         
         cursor.execute(query, params)
@@ -127,28 +120,23 @@ async def get_logs(
         # นับจำนวน logs ทั้งหมด
         count_query = "SELECT COUNT(*) as total FROM logs"
         if q:
-            count_query += " WHERE user LIKE ? OR action LIKE ? OR detail LIKE ?"
-            cursor.execute(count_query, params[-3:])  # ใช้ params เดิมจากการค้นหา
+            count_query += " WHERE action ILIKE %s"
+            cursor.execute(count_query, [params[0]])
         else:
             cursor.execute(count_query)
         total_count = cursor.fetchone()['total']
-        
-        conn.close()
         
         # แปลงข้อมูลเป็น dict
         log_list = []
         for log in logs:
             log_list.append({
                 "id": log["id"],
-                "user": log["user"],
+                "user_id": log["user_id"],
                 "action": log["action"],
-                "detail": log["detail"],
-                "type": log["type"],
-                "ip": log["ip"],
-                "user_agent": log["user_agent"],
-                "timestamp": log["timestamp"],
-                "date": log["date"],
-                "time": log["time"]
+                "created_at": log["created_at"].strftime("%d %b %Y %H:%M:%S") if log["created_at"] else None,
+                "date": log["created_at"].strftime("%d %b %Y") if log["created_at"] else None,
+                "time": log["created_at"].strftime("%H:%M:%S") if log["created_at"] else None,
+                "user": f"User {log['user_id']}"  # ชั่วคราว
             })
         
         return {
@@ -164,61 +152,59 @@ async def get_logs(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
 
 @router.get("/logs/statistics", response_model=dict)
 async def get_log_statistics():
     """ดึงสถิติ logs"""
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # สถิติตามประเภท
-        cursor.execute("SELECT type, COUNT(*) as count FROM logs GROUP BY type")
-        type_stats = cursor.fetchall()
-        
-        # สถิติตามวันที่ (7 วันล่าสุด)
-        cursor.execute("""
-            SELECT date, COUNT(*) as count 
-            FROM logs 
-            WHERE timestamp >= datetime('now', '-7 days')
-            GROUP BY date 
-            ORDER BY date DESC
-        """)
-        daily_stats = cursor.fetchall()
-        
         # จำนวน logs ทั้งหมด
         cursor.execute("SELECT COUNT(*) as total FROM logs")
         total_logs = cursor.fetchone()['total']
         
-        conn.close()
+        # สถิติตามวันที่ (7 วันล่าสุด)
+        cursor.execute("""
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM logs 
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY DATE(created_at) 
+            ORDER BY date DESC
+        """)
+        daily_stats = cursor.fetchall()
         
         return {
             "success": True,
             "statistics": {
                 "total_logs": total_logs,
-                "by_type": [dict(row) for row in type_stats],
                 "daily": [dict(row) for row in daily_stats]
             }
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch statistics: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
 
 @router.delete("/logs/cleanup")
 async def cleanup_old_logs(days_old: int = Query(90, ge=1)):
     """ลบ logs เก่ากว่าจำนวนวันที่กำหนด"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         cursor.execute("""
             DELETE FROM logs 
-            WHERE timestamp < datetime('now', '-{} days')
-        """.format(days_old))
+            WHERE created_at < NOW() - INTERVAL '%s days'
+        """, (days_old,))
         
         deleted_count = cursor.rowcount
         conn.commit()
-        conn.close()
         
         return {
             "success": True,
@@ -227,4 +213,8 @@ async def cleanup_old_logs(days_old: int = Query(90, ge=1)):
         }
         
     except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to cleanup logs: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
