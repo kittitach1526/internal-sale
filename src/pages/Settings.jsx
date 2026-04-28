@@ -7,12 +7,12 @@ import {
   HiOutlinePencilAlt,
   HiOutlineTrash,
   HiOutlineShieldCheck,
+  HiOutlineX,
 } from "react-icons/hi";
 
-import { getUsers } from "../services/user_api";
-import { getProductCategories } from "../services/productService";
-import { getProductCategories2 } from "../services/productService";
-import { getGroupCost } from "../services/group_cost";
+import { getUsers, createUser, updateUser, deleteUser } from "../services/user_api";
+import { getProductCategories, getProductCategories2, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
+import { getGroupCost, createGroupCost, deleteGroupCost, updateGroupCost } from "../services/group_cost";
 
 
 
@@ -23,6 +23,20 @@ export default function Settings() {
   const [users, setUsers] = useState([]);
   // const [group_cost, setGroupCost] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenseForm, setExpenseForm] = useState({ id: "", name: "" });
+  
+  // Product Categories State
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({ id: "", name: "" });
+  const [productType, setProductType] = useState("FOSTEC");
+  
+  // Users State
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({ id: "", name: "", email: "", role: "" });
 
   // --- Mock Data States (ในงานจริงส่วนนี้จะมาจาก API) ---
   useEffect(() => {
@@ -42,6 +56,188 @@ export default function Settings() {
       .then((res) => setExpenseCategories(res.data))
       .catch((err) => console.error(err));
   }, []);
+
+  // --- Handler Functions ---
+  const handleAddExpense = () => {
+    setEditingExpense(null);
+    setExpenseForm({ id: "", name: "" });
+    setShowExpenseModal(true);
+  };
+
+  const handleEditExpense = (expense) => {
+    setEditingExpense(expense);
+    setExpenseForm({ id: expense.id.toString(), name: expense.name });
+    setShowExpenseModal(true);
+  };
+
+  const handleDeleteExpense = (expense) => {
+    if (window.confirm(`คุณต้องการลบ "${expense.name}" ใช่หรือไม่?`)) {
+      deleteGroupCost(expense.id)
+        .then(() => {
+          setExpenseCategories(expenseCategories.filter(cat => cat.id !== expense.id));
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const handleSaveExpense = () => {
+    if (!expenseForm.name.trim() || !expenseForm.id.trim()) return;
+
+    if (editingExpense) {
+      // Update existing expense
+      updateGroupCost(editingExpense.id, expenseForm.name)
+        .then(() => {
+          setExpenseCategories(expenseCategories.map(cat => 
+            cat.id === editingExpense.id ? { ...cat, name: expenseForm.name } : cat
+          ));
+          setShowExpenseModal(false);
+        })
+        .catch((err) => console.error(err));
+    } else {
+      // Add new expense
+      createGroupCost(parseInt(expenseForm.id), expenseForm.name)
+        .then(() => {
+          setExpenseCategories([...expenseCategories, { id: parseInt(expenseForm.id), name: expenseForm.name }]);
+          setShowExpenseModal(false);
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  // Product Category Handlers
+  const handleAddProduct = (type) => {
+    setEditingProduct(null);
+    setProductForm({ id: "", name: "" });
+    setProductType(type);
+    setShowProductModal(true);
+  };
+
+  const handleEditProduct = (product, type) => {
+    setEditingProduct(product);
+    setProductForm({ id: "", name: product }); // For products, we don't have ID in the display yet
+    setProductType(type);
+    setShowProductModal(true);
+  };
+
+  const handleDeleteProduct = (product, type) => {
+    if (window.confirm(`คุณต้องการลบ "${product}" ใช่หรือไม่?`)) {
+      if (type === "FOSTEC") {
+        // Find the product ID from the original data
+        const originalData = productCategories.FOSTEC || [];
+        const index = originalData.indexOf(product);
+        if (index !== -1) {
+          // For now, we'll update the UI directly
+          // In a real implementation, you'd need the actual ID
+          const updatedCategories = { ...productCategories };
+          updatedCategories.FOSTEC = originalData.filter(item => item !== product);
+          setProductCategories(updatedCategories);
+        }
+      } else {
+        // Measuring Work
+        const originalData = productCategories2["งานตรวจรับ"] || [];
+        const index = originalData.indexOf(product);
+        if (index !== -1) {
+          const updatedCategories = { ...productCategories2 };
+          updatedCategories["งานตรวจรับ"] = originalData.filter(item => item !== product);
+          setProductCategories2(updatedCategories);
+        }
+      }
+    }
+  };
+
+  const handleSaveProduct = () => {
+    if (!productForm.name.trim()) return;
+
+    if (productType === "FOSTEC") {
+      if (editingProduct) {
+        // Update existing FOSTEC product
+        const updatedCategories = { ...productCategories };
+        updatedCategories.FOSTEC = updatedCategories.FOSTEC.map(item => 
+          item === editingProduct ? productForm.name : item
+        );
+        setProductCategories(updatedCategories);
+        setShowProductModal(false);
+      } else {
+        // Add new FOSTEC product
+        createFostecProduct(productForm.name)
+          .then(() => {
+            const updatedCategories = { ...productCategories };
+            updatedCategories.FOSTEC = [...(updatedCategories.FOSTEC || []), productForm.name];
+            setProductCategories(updatedCategories);
+            setShowProductModal(false);
+          })
+          .catch((err) => console.error(err));
+      }
+    } else {
+      // Measuring Work
+      if (editingProduct) {
+        // Update existing measuring work
+        const updatedCategories = { ...productCategories2 };
+        updatedCategories["งานตรวจรับ"] = updatedCategories["งานตรวจรับ"].map(item => 
+          item === editingProduct ? productForm.name : item
+        );
+        setProductCategories2(updatedCategories);
+        setShowProductModal(false);
+      } else {
+        // Add new measuring work
+        createMeasuringWork(productForm.name)
+          .then(() => {
+            const updatedCategories = { ...productCategories2 };
+            updatedCategories["งานตรวจรับ"] = [...(updatedCategories["งานตรวจรับ"] || []), productForm.name];
+            setProductCategories2(updatedCategories);
+            setShowProductModal(false);
+          })
+          .catch((err) => console.error(err));
+      }
+    }
+  };
+
+  // User Management Handlers
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setUserForm({ id: "", name: "", email: "", role: "" });
+    setShowUserModal(true);
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({ id: user.id.toString(), name: user.name, email: user.email, role: user.role });
+    setShowUserModal(true);
+  };
+
+  const handleDeleteUser = (user) => {
+    if (window.confirm(`คุณต้องการลบผู้ใช้ "${user.name}" ใช่หรือไม่?`)) {
+      deleteUser(user.id)
+        .then(() => {
+          setUsers(users.filter(u => u.id !== user.id));
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const handleSaveUser = () => {
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role.trim() || !userForm.id.trim()) return;
+
+    if (editingUser) {
+      // Update existing user
+      updateUser(editingUser.id, { name: userForm.name, email: userForm.email, role: userForm.role })
+        .then(() => {
+          setUsers(users.map(u => 
+            u.id === editingUser.id ? { ...u, name: userForm.name, email: userForm.email, role: userForm.role } : u
+          ));
+          setShowUserModal(false);
+        })
+        .catch((err) => console.error(err));
+    } else {
+      // Add new user
+      createUser({ id: parseInt(userForm.id), name: userForm.name, email: userForm.email, role: userForm.role })
+        .then((res) => {
+          setUsers([...users, { ...res.data, id: parseInt(userForm.id), name: userForm.name, email: userForm.email, role: userForm.role }]);
+          setShowUserModal(false);
+        })
+        .catch((err) => console.error(err));
+    }
+  };
 
   // const [productCategories, setProductCategories] = useState({
   //   FOSTEC: ["Fiber Optic", "Splicing", "OTDR Test"],
@@ -113,7 +309,7 @@ export default function Settings() {
               <SectionHeader
                 title="จัดการสิทธิ์การเข้าใช้งาน"
                 icon={HiOutlineShieldCheck}
-                onAdd={() => { }}
+                onAdd={handleAddUser}
               />
               <div className="grid gap-4">
                 {users.map((user) => (
@@ -130,21 +326,24 @@ export default function Settings() {
                           {user.name}
                         </p>
                         <p className="text-slate-500 text-xs">
-                          {user.email} •{" "}
+                          ID: {user.id} • {user.email} •{" "}
                           <span className="text-blue-400">{user.role}</span>
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-
-                      <button className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
+                      <button 
+                        onClick={() => handleEditUser(user)}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg"
+                      >
                         <HiOutlinePencilAlt />
                       </button>
-
-                      <button className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg">
+                      <button 
+                        onClick={() => handleDeleteUser(user)}
+                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg"
+                      >
                         <HiOutlineTrash />
                       </button>
-
                     </div>
                   </div>
                 ))}
@@ -160,7 +359,7 @@ export default function Settings() {
                   <SectionHeader
                     title={`หมวดหมู่ ${group}`}
                     icon={HiOutlineCube}
-                    onAdd={() => { }}
+                    onAdd={() => handleAddProduct(group)}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
@@ -168,14 +367,25 @@ export default function Settings() {
                         key={index}
                         className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/10 rounded-xl"
                       >
-                        <span className="text-sm text-slate-300 font-medium">
-                          {item}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-300 font-medium">
+                            {item}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            ID: {index + 1}
+                          </span>
+                        </div>
                         <div className="flex gap-1">
-                          <button className="p-1.5 text-slate-500 hover:text-white">
+                          <button 
+                            onClick={() => handleEditProduct(item, group)}
+                            className="p-1.5 text-slate-500 hover:text-white"
+                          >
                             <HiOutlinePencilAlt size={14} />
                           </button>
-                          <button className="p-1.5 text-slate-500 hover:text-red-400">
+                          <button 
+                            onClick={() => handleDeleteProduct(item, group)}
+                            className="p-1.5 text-slate-500 hover:text-red-400"
+                          >
                             <HiOutlineTrash size={14} />
                           </button>
                         </div>
@@ -195,7 +405,7 @@ export default function Settings() {
                   <SectionHeader
                     title={`หมวดหมู่ ${group}`}
                     icon={HiOutlineCube}
-                    onAdd={() => { }}
+                    onAdd={() => handleAddProduct(group)}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
@@ -203,14 +413,25 @@ export default function Settings() {
                         key={index}
                         className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/10 rounded-xl"
                       >
-                        <span className="text-sm text-slate-300 font-medium">
-                          {item}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-300 font-medium">
+                            {item}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            ID: {index + 1}
+                          </span>
+                        </div>
                         <div className="flex gap-1">
-                          <button className="p-1.5 text-slate-500 hover:text-white">
+                          <button 
+                            onClick={() => handleEditProduct(item, group)}
+                            className="p-1.5 text-slate-500 hover:text-white"
+                          >
                             <HiOutlinePencilAlt size={14} />
                           </button>
-                          <button className="p-1.5 text-slate-500 hover:text-red-400">
+                          <button 
+                            onClick={() => handleDeleteProduct(item, group)}
+                            className="p-1.5 text-slate-500 hover:text-red-400"
+                          >
                             <HiOutlineTrash size={14} />
                           </button>
                         </div>
@@ -229,7 +450,7 @@ export default function Settings() {
               <SectionHeader
                 title="จัดการหมวดหมู่ค่าใช้จ่าย"
                 icon={HiOutlineCash}
-                onAdd={() => { }}
+                onAdd={handleAddExpense}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {expenseCategories.map((cat, index) => (
@@ -239,18 +460,27 @@ export default function Settings() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <span className="text-sm text-slate-200 font-bold">
-                        {/* แก้จาก {cat} เป็น {cat.name} */}
-                        {cat.name}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-slate-200 font-bold">
+                          {cat.name}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          ID: {cat.id}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* ... ส่วนปุ่มแก้ไข/ลบ เหมือนเดิม ... */}
                     <div className="flex gap-2">
-                      <button className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg">
+                      <button 
+                        onClick={() => handleEditExpense(cat)}
+                        className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg"
+                      >
                         <HiOutlinePencilAlt size={16} />
                       </button>
-                      <button className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg">
+                      <button 
+                        onClick={() => handleDeleteExpense(cat)}
+                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg"
+                      >
                         <HiOutlineTrash size={16} />
                       </button>
                     </div>
@@ -261,6 +491,216 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* Expense Category Modal */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingExpense ? "แก้ไขหมวดหมู่ค่าใช้จ่าย" : "เพิ่มหมวดหมู่ค่าใช้จ่าย"}
+              </h3>
+              <button
+                onClick={() => setShowExpenseModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <HiOutlineX size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ID
+                </label>
+                <input
+                  type="number"
+                  value={expenseForm.id}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, id: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอก ID"
+                  disabled={!!editingExpense}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ชื่อหมวดหมู่
+                </label>
+                <input
+                  type="text"
+                  value={expenseForm.name}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอกชื่อหมวดหมู่ค่าใช้จ่าย"
+                  autoFocus={!editingExpense}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowExpenseModal(false)}
+                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleSaveExpense}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  {editingExpense ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Category Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingProduct ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"} {productType}
+              </h3>
+              <button
+                onClick={() => setShowProductModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <HiOutlineX size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ID
+                </label>
+                <input
+                  type="number"
+                  value={productForm.id}
+                  onChange={(e) => setProductForm({ ...productForm, id: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอก ID"
+                  disabled={!!editingProduct}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ชื่อหมวดหมู่
+                </label>
+                <input
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder={`กรอกชื่อหมวดหมู่${productType}`}
+                  autoFocus={!editingProduct}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowProductModal(false)}
+                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleSaveProduct}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  {editingProduct ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Management Modal */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingUser ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งาน"}
+              </h3>
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <HiOutlineX size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ID
+                </label>
+                <input
+                  type="number"
+                  value={userForm.id}
+                  onChange={(e) => setUserForm({ ...userForm, id: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอก ID"
+                  disabled={!!editingUser}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ชื่อผู้ใช้
+                </label>
+                <input
+                  type="text"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอกชื่อผู้ใช้"
+                  autoFocus={!editingUser}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  อีเมล
+                </label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                  placeholder="กรอกอีเมล"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  บทบาท
+                </label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:bg-white/10"
+                >
+                  <option value="" className="bg-slate-800">เลือกบทบาท</option>
+                  <option value="admin" className="bg-slate-800">Admin</option>
+                  <option value="user" className="bg-slate-800">User</option>
+                  <option value="manager" className="bg-slate-800">Manager</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowUserModal(false)}
+                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleSaveUser}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                >
+                  {editingUser ? "บันทึกการแก้ไข" : "เพิ่มผู้ใช้"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

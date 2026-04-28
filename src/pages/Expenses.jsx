@@ -1,20 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { HiOutlinePlus, HiOutlineChevronDown } from "react-icons/hi2";
+import { getGroupCost } from "../services/group_cost";
 
 export default function Expenses() {
   const [timeRange, setTimeRange] = useState("รายเดือน");
   const [quarter, setQuarter] = useState("Q1");
+  const [expenseCategories, setExpenseCategories] = useState([]);
 
   const periods = ["รายวัน", "รายเดือน", "รายไตรมาส", "รายปี"];
   
-  // ข้อมูลหมวดหมู่ค่าใช้จ่ายตามรูป
-  const expenseCategories = [
-    { id: 1, title: "Fix cost", color: "bg-red-500", total: "0.00" },
-    { id: 2, title: "ค่าใช้จ่ายสำนักงาน", color: "bg-orange-500", total: "0.00" },
-    { id: 3, title: "ค่าเช่า", color: "bg-yellow-500", total: "0.00" },
-    { id: 4, title: "ค่าน้ำมันในการทำงาน", color: "bg-emerald-500", total: "0.00" },
-    { id: 5, title: "ค่าใช้จ่ายใน Job งาน", color: "bg-blue-500", total: "0.00" },
+  // Color mapping for dynamic categories
+  const colorMapping = [
+    "bg-red-500",
+    "bg-orange-500", 
+    "bg-yellow-500",
+    "bg-emerald-500",
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-indigo-500",
+    "bg-teal-500",
+    "bg-cyan-500"
   ];
+
+  // Fetch expense categories from API
+  useEffect(() => {
+    getGroupCost()
+      .then((res) => {
+        const categories = res.data.map((cat, index) => ({
+          id: cat.id,
+          title: cat.name,
+          color: colorMapping[index % colorMapping.length],
+          total: "0.00"
+        }));
+        setExpenseCategories(categories);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-6 animate-in fade-in duration-700">

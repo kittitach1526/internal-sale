@@ -41,3 +41,16 @@ def delete_group_cost(group_cost_id):
         conn.close()
 
     return True
+
+def update_group_cost(group_cost_id, name):
+    conn, cur = get_cursor(dict_mode=True)
+    try:
+        cur.execute("UPDATE group_cost SET name = %s WHERE id = %s;", (name, group_cost_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        return False
+    finally:
+        cur.close()
+        conn.close()
