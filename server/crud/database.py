@@ -3,7 +3,7 @@ import configparser
 
 
 DB_CONFIG = {
-    "host": "192.168.100.206",
+    "host": "postgresql.sphx-dev.online",
     "database": "salesdb",
     "user": "postgres",
     "password": "energy2023"
