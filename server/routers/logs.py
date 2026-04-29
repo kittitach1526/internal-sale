@@ -101,26 +101,33 @@ async def get_logs(
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # สร้าง query พื้นฐาน
-        query = "SELECT * FROM logs"
+        # สร้าง query พื้นฐาน - JOIN กับตาราง users เพื่อดึงชื่อ
+        query = """
+            SELECT l.id, l.user_id, l.action, l.created_at, u.name as user_name
+            FROM logs l
+            LEFT JOIN users u ON l.user_id = u.id
+        """
         params = []
         
         # เพิ่มการค้นหาถ้ามี (ค้นหาใน action)
         if q:
-            query += " WHERE action ILIKE %s"
+            query += " WHERE l.action ILIKE %s"
             params.append(f"%{q}%")
         
         # เพิ่มการเรียงลำดับและ pagination
-        query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        query += " ORDER BY l.created_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, (page - 1) * limit])
         
         cursor.execute(query, params)
         logs = cursor.fetchall()
         
         # นับจำนวน logs ทั้งหมด
-        count_query = "SELECT COUNT(*) as total FROM logs"
+        count_query = """
+            SELECT COUNT(*) as total 
+            FROM logs l
+        """
         if q:
-            count_query += " WHERE action ILIKE %s"
+            count_query += " WHERE l.action ILIKE %s"
             cursor.execute(count_query, [params[0]])
         else:
             cursor.execute(count_query)
@@ -129,6 +136,7 @@ async def get_logs(
         # แปลงข้อมูลเป็น dict
         log_list = []
         for log in logs:
+            user_name = log.get("user_name") or f"User {log['user_id']}"
             log_list.append({
                 "id": log["id"],
                 "user_id": log["user_id"],
@@ -136,7 +144,7 @@ async def get_logs(
                 "created_at": log["created_at"].strftime("%d %b %Y %H:%M:%S") if log["created_at"] else None,
                 "date": log["created_at"].strftime("%d %b %Y") if log["created_at"] else None,
                 "time": log["created_at"].strftime("%H:%M:%S") if log["created_at"] else None,
-                "user": f"User {log['user_id']}"  # ชั่วคราว
+                "user": user_name  # แสดงชื่อจริง ถ้ามี
             })
         
         return {
