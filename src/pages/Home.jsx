@@ -25,7 +25,7 @@ const chartData = [
 ];
 
 // --- Component ย่อย 1: StatCard (แถวบน) ---
-function StatCard({ title, value, trend, isPositive = true }) {
+function StatCard({ title, value, trend, isPositive = true, valueColor = null }) {
   return (
     <div className="relative group isolate p-8 bg-blue-600/5 backdrop-blur-md border border-white/10 rounded-[2rem] shadow-2xl [clip-path:inset(0_round_2rem)] transition-all duration-300 hover:border-white/20">
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -35,7 +35,9 @@ function StatCard({ title, value, trend, isPositive = true }) {
         <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-3">
           {title}
         </h3>
-        <p className="text-3xl lg:text-4xl font-black text-white tracking-tight">
+        <p className={`text-3xl lg:text-4xl font-black tracking-tight ${
+          valueColor || "text-white"
+        }`}>
           {value}
         </p>
         <div className="mt-4 flex items-center gap-2">
@@ -519,18 +521,21 @@ export default function Home() {
           value={loading ? "กำลังโหลด..." : `฿ ${totalExpenses.toLocaleString()}`} 
           trend="8.2%" 
           isPositive={false}
+          valueColor="text-red-400"
         />
         <StatCard
           title="กำไรสุทธิ"
           value={loading ? "กำลังโหลด..." : `฿ ${(totalRevenue - totalExpenses).toLocaleString()}`}
           trend="2.4%"
           isPositive={totalRevenue >= totalExpenses}
+          valueColor="text-green-400"
         />
         <StatCard 
           title="อัตรากำไร" 
           value={loading ? "กำลังโหลด..." : `${totalRevenue > 0 ? Math.round(((totalRevenue - totalExpenses) / totalRevenue) * 100) : 0}%`}
           trend={totalRevenue > 0 ? `${Math.abs(Math.round(((totalRevenue - totalExpenses) / totalRevenue) * 100))}%` : "0%"}
-          isPositive={totalRevenue > totalExpenses}
+          isPositive={totalRevenue > 0 && Math.round(((totalRevenue - totalExpenses) / totalRevenue) * 100) > 20}
+          valueColor={totalRevenue > 0 && Math.round(((totalRevenue - totalExpenses) / totalRevenue) * 100) > 20 ? "text-green-400" : "text-red-400"}
         />
       </div>
 
@@ -570,32 +575,70 @@ export default function Home() {
           </button>
         </div>
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="group flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-white/10 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 font-bold border border-blue-500/20 group-hover:scale-110 transition-transform">
-                  #
+          {loading ? (
+            // Loading state
+            [1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="group flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white/10 rounded-xl"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-white/10 rounded"></div>
+                      <div className="h-3 w-24 bg-white/10 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="h-4 w-20 bg-white/10 rounded ml-auto"></div>
+                    <div className="h-3 w-16 bg-white/10 rounded ml-auto"></div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    รายการสั่งซื้อ #INV-00{i}
+              </div>
+            ))
+          ) : salesData.length > 0 ? (
+            // Real data from salesData
+            salesData.slice(0, 5).map((sale, index) => (
+              <div
+                key={sale.id || index}
+                className="group flex justify-between items-center p-4 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-white/10 transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 font-bold border border-blue-500/20 group-hover:scale-110 transition-transform">
+                    #
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      {sale.name || `รายการขาย #${sale.id || index + 1}`}
+                    </p>
+                    <p className="text-[10px] text-slate-500 uppercase mt-0.5">
+                      {sale.created_at ? new Date(sale.created_at).toLocaleDateString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      }) + ' • ' + new Date(sale.created_at).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'ไม่มีข้อมูลเวลา'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-white">
+                    ฿ {parseFloat(sale.price || 0).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-slate-500 uppercase mt-0.5">
-                    25 เมษายน 2026 • 14:30
+                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-tighter">
+                    สำเร็จแล้ว
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-black text-white">฿ 4,500.00</p>
-                <p className="text-[10px] text-green-400 font-bold uppercase tracking-tighter">
-                  สำเร็จแล้ว
-                </p>
-              </div>
+            ))
+          ) : (
+            // No data state
+            <div className="py-12 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+              <p className="text-slate-500 font-bold">
+                ยังไม่มีข้อมูลยอดขาย
+              </p>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

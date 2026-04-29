@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { getUsers, createUser, updateUser, deleteUser } from "../services/user_api";
-import { getProductCategories, getProductCategories2, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
+import { getProductCategories, getProductCategories2, getFostecProducts, getMeasuringWorks, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
 import { getGroupCost, createGroupCost, deleteGroupCost, updateGroupCost } from "../services/group_cost";
 import { isAdminOrManager } from "../utils/auth";
 
@@ -33,6 +33,8 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("users");
   const [productCategories, setProductCategories] = useState({});
   const [productCategories2, setProductCategories2] = useState({});
+  const [fostecProducts, setFostecProducts] = useState([]);
+  const [measuringWorks, setMeasuringWorks] = useState([]);
   const [users, setUsers] = useState([]);
   // const [group_cost, setGroupCost] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
@@ -63,6 +65,15 @@ export default function Settings() {
 
     getProductCategories2()
       .then((data) => setProductCategories2(data))
+      .catch((err) => console.error(err));
+
+    // ดึงข้อมูลสินค้าที่มี ID จริง
+    getFostecProducts()
+      .then((data) => setFostecProducts(data))
+      .catch((err) => console.error(err));
+
+    getMeasuringWorks()
+      .then((data) => setMeasuringWorks(data))
       .catch((err) => console.error(err));
 
     getGroupCost()
@@ -134,25 +145,59 @@ export default function Settings() {
 
   const handleDeleteProduct = (product, type) => {
     if (window.confirm(`คุณต้องการลบ "${product}" ใช่หรือไม่?`)) {
+      console.log('🔍 Debug - Deleting product:', { product, type });
+      console.log('🔍 Debug - Available fostecProducts:', fostecProducts);
+      console.log('🔍 Debug - Available measuringWorks:', measuringWorks);
+      
       if (type === "FOSTEC") {
-        // Find the product ID from the original data
-        const originalData = productCategories.FOSTEC || [];
-        const index = originalData.indexOf(product);
-        if (index !== -1) {
-          // For now, we'll update the UI directly
-          // In a real implementation, you'd need the actual ID
-          const updatedCategories = { ...productCategories };
-          updatedCategories.FOSTEC = originalData.filter(item => item !== product);
-          setProductCategories(updatedCategories);
+        // Find the product with this name in the fostecProducts array
+        const productToDelete = fostecProducts.find(p => p.name === product);
+        console.log('🔍 Debug - FOSTEC product to delete:', productToDelete);
+        
+        if (productToDelete) {
+          console.log('🔍 Debug - Calling deleteFostecProduct with ID:', productToDelete.id);
+          deleteFostecProduct(productToDelete.id)
+            .then((response) => {
+              console.log('✅ Debug - Delete FOSTEC successful:', response);
+              // Update both the full data and the display data
+              setFostecProducts(fostecProducts.filter(p => p.id !== productToDelete.id));
+              const updatedCategories = { ...productCategories };
+              updatedCategories.FOSTEC = productCategories.FOSTEC.filter(item => item !== product);
+              setProductCategories(updatedCategories);
+            })
+            .catch((err) => {
+              console.error('❌ Debug - Error deleting FOSTEC product:', err);
+              console.error('❌ Debug - Error response:', err.response);
+              alert('ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่');
+            });
+        } else {
+          console.log('❌ Debug - FOSTEC product not found with name:', product);
+          alert('ไม่พบข้อมูลสินค้านี้');
         }
       } else {
-        // Measuring Work
-        const originalData = productCategories2["งานตรวจรับ"] || [];
-        const index = originalData.indexOf(product);
-        if (index !== -1) {
-          const updatedCategories = { ...productCategories2 };
-          updatedCategories["งานตรวจรับ"] = originalData.filter(item => item !== product);
-          setProductCategories2(updatedCategories);
+        // Measuring Work - find the product with this name in the measuringWorks array
+        const workToDelete = measuringWorks.find(w => w.name === product);
+        console.log('🔍 Debug - Measuring work to delete:', workToDelete);
+        
+        if (workToDelete) {
+          console.log('🔍 Debug - Calling deleteMeasuringWork with ID:', workToDelete.id);
+          deleteMeasuringWork(workToDelete.id)
+            .then((response) => {
+              console.log('✅ Debug - Delete measuring work successful:', response);
+              // Update both the full data and the display data
+              setMeasuringWorks(measuringWorks.filter(w => w.id !== workToDelete.id));
+              const updatedCategories = { ...productCategories2 };
+              updatedCategories["งานตรวจรับ"] = productCategories2["งานตรวจรับ"].filter(item => item !== product);
+              setProductCategories2(updatedCategories);
+            })
+            .catch((err) => {
+              console.error('❌ Debug - Error deleting measuring work:', err);
+              console.error('❌ Debug - Error response:', err.response);
+              alert('ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่');
+            });
+        } else {
+          console.log('❌ Debug - Measuring work not found with name:', product);
+          alert('ไม่พบข้อมูลงานตรวจรับนี้');
         }
       }
     }

@@ -7,12 +7,17 @@ export const getProductCategories = async () => {
   const res = await axios.get(API_URL);
   const data = res.data;
 
-  // 🔥 แปลงเป็น format ที่ UI ต้องใช้
+  // แปลงเป็น format ที่ UI ต้องใช้
   const grouped = {
     FOSTEC: data.map((item) => item.name),
   };
 
   return grouped;
+};
+
+export const getFostecProducts = async () => {
+  const res = await axios.get(API_URL);
+  return res.data;
 };
 
 export const getProductCategories2 = async () => {
@@ -25,6 +30,11 @@ export const getProductCategories2 = async () => {
   };
 
   return grouped;
+};
+
+export const getMeasuringWorks = async () => {
+  const res = await axios.get(API_URL_2);
+  return res.data;
 };
 
 // FOSTEC Product CRUD
