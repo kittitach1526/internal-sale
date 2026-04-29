@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000/api/fostec_product";
-const API_URL_2 = "http://127.0.0.1:8000/api/measuring_work";
+const API_URL = "https://sales-api.sphx-dev.online/api/fostec_product";
+const API_URL_2 = "https://sales-api.sphx-dev.online/api/measuring_work";
 
 export const getProductCategories = async () => {
   const res = await axios.get(API_URL);

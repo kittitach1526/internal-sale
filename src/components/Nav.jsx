@@ -10,6 +10,7 @@ export default function Nav() {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
 
   // กรองเมนูตามสิทธิ์ผู้ใช้
   const allMenuItems = [
@@ -85,13 +86,8 @@ export default function Nav() {
             </span>
           </div>
 
-          {/* Profile & Notify */}
+          {/* Profile */}
           <div className="flex items-center gap-4">
-            <button className="p-2.5 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all relative">
-              <HiOutlineBell size={20} className="text-slate-400" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-[#020617]"></span>
-            </button>
-
             {/* --- ส่วนที่ปรับ: กดแล้วเมนูเด้ง --- */}
             <div className="relative" ref={menuRef}>
               <div 
@@ -99,7 +95,9 @@ export default function Nav() {
                 className={`flex items-center gap-3 p-1 rounded-full border transition-all cursor-pointer select-none
                   ${isOpen ? 'bg-white/15 border-white/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">SS</div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
+                  {currentUser ? (currentUser.username ? currentUser.username.charAt(0).toUpperCase() : currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U') : 'U'}
+                </div>
                 <HiOutlineChevronDown size={14} className={`text-slate-500 mr-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </div>
 
@@ -107,17 +105,14 @@ export default function Nav() {
               {isOpen && (
                 <div className="absolute right-0 mt-3 w-56 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                   <div className="p-4 border-b border-white/5">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Administrator</p>
-                    <p className="text-sm text-white font-medium truncate">somchai.s@energy.com</p>
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">
+                      {currentUser ? (currentUser.group_name || (currentUser.group_id === 1 ? 'Administrator' : currentUser.group_id === 2 ? 'Manager' : 'User')) : 'User'}
+                    </p>
+                    <p className="text-sm text-white font-medium truncate">
+                      {currentUser ? (currentUser.email || currentUser.username || currentUser.name || 'Unknown User') : 'Unknown User'}
+                    </p>
                   </div>
                   <div className="p-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl transition-all">
-                      <HiOutlineUser size={18} /> โปรไฟล์
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 rounded-xl transition-all">
-                      <HiOutlineAdjustments size={18} /> ตั้งค่า
-                    </button>
-                    <div className="h-px bg-white/5 my-1" />
                     <button 
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all font-bold"

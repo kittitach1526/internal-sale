@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://sales-api.sphx-dev.online/api';
 
 // ฟังก์ชันสร้าง log entry สำหรับบันทึกกิจกรรม
 export const createLog = async (logData) => {
