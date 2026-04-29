@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-// API base URL
-const API_URL = 'https://sales-api.sphx-dev.online/api';
+const API = axios.create({
+  baseURL: 'https://sales-api.sphx-dev.online/api'
+});
 
 // ฟังก์ชันสร้าง log entry สำหรับบันทึกกิจกรรม
 export const createLog = async (logData) => {
   try {
-    const response = await axios.post(`${API_URL}/logs`, logData);
+    const response = await API.post('/logs', logData);
     return response.data;
   } catch (error) {
     console.error('Error creating log:', error);
@@ -17,7 +18,7 @@ export const createLog = async (logData) => {
 // ฟังก์ชันดึงข้อมูล logs ทั้งหมด
 export const getLogs = async () => {
   try {
-    const response = await axios.get(`${API_URL}/logs`);
+    const response = await API.get('/logs');
     return response.data;
   } catch (error) {
     console.error('Error fetching logs:', error);
@@ -33,7 +34,7 @@ export const getLogsWithPagination = async (page = 1, limit = 10, filters = {}) 
       limit,
       ...filters
     };
-    const response = await axios.get(`${API_URL}/logs`, { params });
+    const response = await API.get('/logs', { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching logs with pagination:', error);
@@ -44,7 +45,7 @@ export const getLogsWithPagination = async (page = 1, limit = 10, filters = {}) 
 // ฟังก์ชันค้นหา logs
 export const searchLogs = async (searchTerm, page = 1, limit = 10) => {
   try {
-    const response = await axios.get(`${API_URL}/logs/search`, {
+    const response = await API.get('/logs/search', {
       params: { q: searchTerm, page, limit }
     });
     return response.data;
@@ -57,7 +58,7 @@ export const searchLogs = async (searchTerm, page = 1, limit = 10) => {
 // ฟังก์ชันลบ logs เก่า (ตามจำนวนที่กำหนด)
 export const deleteOldLogs = async (daysOld = 90) => {
   try {
-    const response = await axios.delete(`${API_URL}/logs/cleanup`, {
+    const response = await API.delete('/logs/cleanup', {
       params: { days_old: daysOld }
     });
     return response.data;
@@ -70,7 +71,7 @@ export const deleteOldLogs = async (daysOld = 90) => {
 // ฟังก์ชันดึงสถิติ logs
 export const getLogStatistics = async () => {
   try {
-    const response = await axios.get(`${API_URL}/logs/statistics`);
+    const response = await API.get('/logs/statistics');
     return response.data;
   } catch (error) {
     console.error('Error fetching log statistics:', error);

@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://sales-api.sphx-dev.online/api';
+const API = axios.create({
+  baseURL: 'https://sales-api.sphx-dev.online/api'
+});
 
 export const getProductTypes = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/product_types`);
+    const response = await API.get('/product_types');
     return response.data;
   } catch (error) {
     console.error('Error fetching product types:', error);
@@ -14,7 +16,7 @@ export const getProductTypes = async () => {
 
 export const getProductTypesByCategory = async (categoryId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/product_types/category/${categoryId}`);
+    const response = await API.get(`/product_types/category/${categoryId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching product types by category:', error);
@@ -24,7 +26,7 @@ export const getProductTypesByCategory = async (categoryId) => {
 
 export const getProductTypeById = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/product_types/${id}`);
+    const response = await API.get(`/product_types/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching product type:', error);
@@ -34,7 +36,7 @@ export const getProductTypeById = async (id) => {
 
 export const createProductType = async (typeData) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/product_types`, typeData);
+    const response = await API.post('/product_types', typeData);
     return response.data;
   } catch (error) {
     console.error('Error creating product type:', error);
@@ -44,7 +46,7 @@ export const createProductType = async (typeData) => {
 
 export const updateProductType = async (id, typeData) => {
   try {
-    const response = await axios.put(`${API_BASE_URL}/product_types/${id}`, typeData);
+    const response = await API.put(`/product_types/${id}`, typeData);
     return response.data;
   } catch (error) {
     console.error('Error updating product type:', error);
@@ -54,7 +56,7 @@ export const updateProductType = async (id, typeData) => {
 
 export const deleteProductType = async (id) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/product_types/${id}`);
+    const response = await API.delete(`/product_types/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting product type:', error);

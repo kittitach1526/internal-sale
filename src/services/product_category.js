@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://sales-api.sphx-dev.online/api';
+const API = axios.create({
+  baseURL: 'https://sales-api.sphx-dev.online/api'
+});
 
 export const getProductCategories = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/product_categories`);
+    const response = await API.get('/product_categories');
     return response.data;
   } catch (error) {
     console.error('Error fetching product categories:', error);
@@ -14,7 +16,7 @@ export const getProductCategories = async () => {
 
 export const getProductCategoryById = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/product_categories/${id}`);
+    const response = await API.get(`/product_categories/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching product category:', error);
@@ -24,7 +26,7 @@ export const getProductCategoryById = async (id) => {
 
 export const createProductCategory = async (categoryData) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/product_categories`, categoryData);
+    const response = await API.post('/product_categories', categoryData);
     return response.data;
   } catch (error) {
     console.error('Error creating product category:', error);
@@ -34,7 +36,7 @@ export const createProductCategory = async (categoryData) => {
 
 export const updateProductCategory = async (id, categoryData) => {
   try {
-    const response = await axios.put(`${API_BASE_URL}/product_categories/${id}`, categoryData);
+    const response = await API.put(`/product_categories/${id}`, categoryData);
     return response.data;
   } catch (error) {
     console.error('Error updating product category:', error);
@@ -44,7 +46,7 @@ export const updateProductCategory = async (id, categoryData) => {
 
 export const deleteProductCategory = async (id) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/product_categories/${id}`);
+    const response = await API.delete(`/product_categories/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting product category:', error);

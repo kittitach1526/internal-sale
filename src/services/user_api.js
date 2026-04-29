@@ -20,7 +20,7 @@ export const createUser = (userData) => {
   params.append('password', userData.password);
   params.append('group_user', userData.role); // Use group_user instead of role
   
-  return axios.post(`${API.defaults.baseURL}/users?${params.toString()}`);
+  return API.post(`/users?${params.toString()}`);
 };
 
 export const updateUser = (id, data) => API.put(`/users/${id}`, data);

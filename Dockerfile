@@ -1,7 +1,7 @@
 # Internal Sale System - React Frontend Dockerfile
-# Use Node.js 22 for Vite compatibility
+# Use Node.js 24 for Vite compatibility
 
-FROM node:22-alpine
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
