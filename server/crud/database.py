@@ -3,7 +3,7 @@ import configparser
 
 
 DB_CONFIG = {
-    "host": "postgresql.sphx-dev.online",
+    "host": "localhost",
     "database": "salesdb",
     "user": "postgres",
     "password": "energy2023"
