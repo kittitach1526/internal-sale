@@ -14,11 +14,22 @@ import { useNavigate } from "react-router-dom";
 import { getUsers, createUser, updateUser, deleteUser } from "../services/user_api";
 import { getProductCategories, getProductCategories2, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
 import { getGroupCost, createGroupCost, deleteGroupCost, updateGroupCost } from "../services/group_cost";
+import { isAdminOrManager } from "../utils/auth";
 
 
 
 export default function Settings() {
   const navigate = useNavigate();
+  
+  // ตรวจสอบสิทธิ์ - เฉพาะ admin และ manager เท่านั้นที่เข้าได้
+  useEffect(() => {
+    if (!isAdminOrManager()) {
+      alert('ไม่มีสิทธิ์เข้าถึงหน้า Settings\nต้องเป็น Admin หรือ Manager เท่านั้น');
+      navigate('/home');
+      return;
+    }
+  }, [navigate]);
+  
   const [activeTab, setActiveTab] = useState("users");
   const [productCategories, setProductCategories] = useState({});
   const [productCategories2, setProductCategories2] = useState({});

@@ -25,8 +25,8 @@ export const isAdminOrRoot = () => {
     return false;
   }
   
-  // group_id 1 = admin, 2 = root (ตามตาราง group_user ที่สร้างไว้)
-  return user.group_id === 1 || user.group_id === 2;
+  // group_id 1 = admin, 0 = root (ถ้ามี)
+  return user.group_id === 1 || user.group_id === 0;
 };
 
 // ตรวจสอบว่าเป็น admin เท่านั้น
@@ -41,6 +41,27 @@ export const isAdmin = () => {
 
 // ตรวจสอบว่าเป็น root เท่านั้น
 export const isRoot = () => {
+  const user = getCurrentUser();
+  if (!user || !user.group_id) {
+    return false;
+  }
+  
+  return user.group_id === 0;
+};
+
+// ตรวจสอบว่าเป็น admin หรือ manager หรือไม่
+export const isAdminOrManager = () => {
+  const user = getCurrentUser();
+  if (!user || !user.group_id) {
+    return false;
+  }
+  
+  // group_id 1 = admin, 2 = manager (ตามตาราง group_user ที่ init_database.py สร้าง)
+  return user.group_id === 1 || user.group_id === 2;
+};
+
+// ตรวจสอบว่าเป็น manager เท่านั้น
+export const isManager = () => {
   const user = getCurrentUser();
   if (!user || !user.group_id) {
     return false;

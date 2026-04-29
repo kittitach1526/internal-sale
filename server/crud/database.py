@@ -3,7 +3,7 @@ import configparser
 
 
 DB_CONFIG = {
-    "host": "localhost",
+    "host": "192.168.100.206",
     "database": "salesdb",
     "user": "postgres",
     "password": "energy2023"
