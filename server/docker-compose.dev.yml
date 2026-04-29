@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # FastAPI Server (Development Only)
+  api:
+    build: .
+    container_name: internal-sale-api-dev
+    environment:
+      DB_HOST: 192.168.100.206
+      DB_NAME: salesdb
+      DB_USER: postgres
+      DB_PASSWORD: energy2023
+      DB_PORT: 5432
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    networks:
+      - internal-sale-network
+    restart: unless-stopped
+    command: uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  internal-sale-network:
+    driver: bridge

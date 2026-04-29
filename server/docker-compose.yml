@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: internal-sale-db
+    environment:
+      POSTGRES_DB: salesdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: energy2023
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_database.py:/docker-entrypoint-initdb.d/init_database.py
+    ports:
+      - "5432:5432"
+    networks:
+      - internal-sale-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Server
+  api:
+    build: .
+    container_name: internal-sale-api
+    environment:
+      DB_HOST: postgres
+      DB_NAME: salesdb
+      DB_USER: postgres
+      DB_PASSWORD: energy2023
+      DB_PORT: 5432
+      DOCKER_ENV: production
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal-sale-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  internal-sale-network:
+    driver: bridge
