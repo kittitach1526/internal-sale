@@ -27,19 +27,8 @@ app.include_router(logs.router, prefix="/api")
 
 # run servers
 if __name__ == "__main__":
-    # Check if running in Docker (production mode)
-    import os
-    if os.getenv("DOCKER_ENV") == "production":
-        uvicorn.run(
-            "server:app",
-            host="0.0.0.0",
-            port=8000
-        )
-    else:
-        # Development mode
-        uvicorn.run(
-            "server:app",
-            host="127.0.0.1",
-            port=8000,
-            reload=True
-        )
+    uvicorn.run(
+        "server:app",
+        host="0.0.0.0",
+        port=8000
+    )
