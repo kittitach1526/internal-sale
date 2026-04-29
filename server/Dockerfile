@@ -1,6 +1,6 @@
 # Internal Sale System - FastAPI Server Dockerfile
-# Use Python 3.11 slim image for production
-FROM python:3.11-slim
+# Use Python 3.14 slim image for production
+FROM python:3.14-slim
 
 # Set working directory
 WORKDIR /app
