@@ -115,6 +115,13 @@ export const checkPageAccess = (pageName) => {
     }
   }
   
+  // หน้าที่ผู้ใช้ที่ล็อกอินแล้วสามารถเข้าถึงได้ (Home, Sales, Expenses)
+  const authenticatedPages = ['Home', 'Sales', 'Expenses'];
+  
+  if (authenticatedPages.includes(pageName)) {
+    return { allowed: true, reason: 'access_granted' };
+  }
+  
   // หน้าอื่นๆ ผู้ใช้ทั่วไปสามารถเข้าถึงได้
   return { allowed: true, reason: 'access_granted' };
 };

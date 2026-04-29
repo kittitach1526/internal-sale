@@ -36,8 +36,22 @@ export default function App() {
         <AccessDeniedMessage />
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Home />} />
-          <Route path="/sales" element={<Sales />} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute pageName="Home">
+                <Home />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/sales" 
+            element={
+              <ProtectedRoute pageName="Sales">
+                <Sales />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/add-sale" 
             element={
@@ -46,7 +60,14 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
-          <Route path="/expenses" element={<Expenses />} />
+          <Route 
+            path="/expenses" 
+            element={
+              <ProtectedRoute pageName="Expenses">
+                <Expenses />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/add-expense" 
             element={
