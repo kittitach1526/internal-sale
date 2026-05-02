@@ -3,14 +3,24 @@ from .database import *
 def create_sales(group_work_id, name, price, description):
     conn, cur = get_cursor(dict_mode=True)
     try:
+        print(f"=== CREATE SALES DEBUG ===")
+        print(f"group_work_id: {group_work_id} (type: {type(group_work_id)})")
+        print(f"name: {name} (type: {type(name)})")
+        print(f"price: {price} (type: {type(price)})")
+        print(f"description: {description} (type: {type(description)})")
+        
         cur.execute("""
             INSERT INTO sales (group_work_id, name, price, description)
             VALUES (%s, %s, %s, %s);
         """, (group_work_id, name, int(price), description))
         conn.commit()
+        print("Sales created successfully!")
         return True
     except Exception as e:
-        print(e)
+        print(f"ERROR creating sales: {e}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         return False
     finally:
         cur.close()

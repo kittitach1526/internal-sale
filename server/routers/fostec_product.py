@@ -3,8 +3,6 @@ from fastapi import APIRouter, HTTPException
 from crud.fostec_product import (
     create_product_fostec,
     get_all_product_fostec,
-    get_fostec_product_categories,
-    get_fostec_product_types_by_category,
     delete_product_fostec
 )
 
@@ -22,15 +20,6 @@ def create_product(id : int ,name: str):
 def get_all_product():
     return get_all_product_fostec()
 
-# GET categories
-@router.get("/categories")
-def get_categories():
-    return get_fostec_product_categories()
-
-# GET types by category
-@router.get("/types/{category}")
-def get_types_by_category(category: str):
-    return get_fostec_product_types_by_category(category)
 
 # DELETE
 @router.delete("/{id}")
