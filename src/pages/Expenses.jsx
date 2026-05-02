@@ -56,6 +56,8 @@ export default function Expenses() {
   useEffect(() => {
     getCosts()
       .then((res) => {
+        console.log('Expense records from API:', res.data);
+        console.log('Sample record structure:', res.data[0]);
         setExpenseRecords(res.data);
         // Calculate totals for each category
         const categoryTotals = {};
@@ -270,10 +272,12 @@ export default function Expenses() {
                 <tbody>
                   {expenseRecords
                     .filter(record => record.group_cost_id === category.id)
-                    .map((record) => (
+                    .map((record) => {
+                      console.log('Rendering record:', record);
+                      return (
                       <tr key={record.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                         <td className="px-6 py-3 text-sm text-slate-300">
-                          {record.description}
+                          {record.description || 'N/A'}
                         </td>
                         <td className="px-6 py-3 text-sm text-slate-400 text-center">
                           {record.date}
@@ -301,7 +305,8 @@ export default function Expenses() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   {expenseRecords.filter(record => record.group_cost_id === category.id).length === 0 && (
                     <tr>
                       <td colSpan="5" className="px-6 py-10 text-center text-slate-600 text-sm italic font-medium">

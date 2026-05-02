@@ -42,19 +42,61 @@ export default function AddExpense() {
     e.preventDefault();
     setLoading(true);
     
+    // Validate form data before sending
+    if (!formData.group_cost_id || !formData.name || !formData.amount || !formData.date) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      setLoading(false);
+      return;
+    }
+    
+    const costData = {
+      group_cost_id: parseInt(formData.group_cost_id),
+      description: formData.name, // API expects name in description field
+      amount: parseFloat(formData.amount), // API expects 'amount' not 'price'
+      date: formData.date, // Date picker already provides YYYY-MM-DD format
+      note: formData.note || "" // API expects string, not null
+    };
+    
+    console.log('Sending cost data:', costData);
+    
     try {
-      await createCost({
-        group_cost_id: parseInt(formData.group_cost_id),
-        name: formData.name,
-        price: parseFloat(formData.amount),
-        description: formData.note
-      });
+      await createCost(costData);
       
       // Navigate back to Expenses page
       navigate('/expenses');
     } catch (error) {
       console.error('Error creating expense:', error);
-      alert('เกิดข้อผิดพลาดในการเพิ่มข้อมูล กรุณาลองใหม่');
+      console.error('Error response:', error.response?.data);
+      
+      // Log the full error response for debugging
+      if (error.response?.data) {
+        console.log('Full error response:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      // Show more specific error message
+      if (error.response?.data?.detail) {
+        const errors = error.response.data.detail;
+        console.log('Errors array:', errors);
+        
+        if (Array.isArray(errors)) {
+          const errorMessages = errors.map((err, index) => {
+            console.log(`Error ${index}:`, err);
+            if (typeof err === 'object' && err.msg) {
+              return `${err.loc ? err.loc.join('.') + ': ' : ''}${err.msg}`;
+            } else if (typeof err === 'object') {
+              return JSON.stringify(err);
+            }
+            return String(err);
+          }).join('\n');
+          alert(`เกิดข้อผิดพลาดในการตรวจสอบข้อมูล:\n${errorMessages}`);
+        } else {
+          alert(`เกิดข้อผิดพลาด: ${JSON.stringify(errors)}`);
+        }
+      } else if (error.response?.data?.message) {
+        alert(`เกิดข้อผิดพลาด: ${error.response.data.message}`);
+      } else {
+        alert(`เกิดข้อผิดพลาดในการเพิ่มข้อมูล: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
