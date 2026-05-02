@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: 'https://sales-api.sphx-dev.online/api'
+  baseURL: 'http://localhost:8000/api'
 });
 
 export const getProductCategories = async () => {
@@ -39,15 +39,19 @@ export const getMeasuringWorks = async () => {
 };
 
 // FOSTEC Product CRUD
-export const createFostecProduct = (id, name) => {
-  return API.post(`/fostec_product?id=${id}&name=${name}`);
+export const createFostecProduct = (name) => {
+  // Generate auto ID to prevent duplicates
+  const autoId = Math.floor(Math.random() * 10000) + 1000;
+  return API.post(`/fostec_product?id=${autoId}&name=${name}`);
 };
 export const deleteFostecProduct = (id) => API.delete(`/fostec_product/${id}`);
 export const updateFostecProduct = (id, name) => API.put(`/fostec_product/${id}?name=${name}`);
 
 // Measuring Work CRUD
-export const createMeasuringWork = (id, name) => {
-  return API.post(`/measuring_work?id=${id}&name=${name}`);
+export const createMeasuringWork = (name) => {
+  // Generate auto ID to prevent duplicates
+  const autoId = Math.floor(Math.random() * 10000) + 1000;
+  return API.post(`/measuring_work?id=${autoId}&name=${name}`);
 };
 export const deleteMeasuringWork = (id) => API.delete(`/measuring_work/${id}`);
 export const updateMeasuringWork = (id, name) => API.put(`/measuring_work/${id}?name=${name}`);

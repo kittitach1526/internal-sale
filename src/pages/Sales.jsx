@@ -15,16 +15,7 @@ import { getSales, getMonthlySalesData, getSalesStatistics, deleteSale, updateSa
 import { getFostecProducts } from "../services/fostec_product";
 import { getMeasuringWorks } from "../services/measuring_work";
 import { isAdminOrRoot } from "../utils/auth";
-
-// ข้อมูลยอดขายรายเดือน (fallback data)
-const fallbackSalesData = [
-  { month: "Jan", amount: 45000 },
-  { month: "Feb", amount: 52000 },
-  { month: "Mar", amount: 48000 },
-  { month: "Apr", amount: 61000 },
-  { month: "May", amount: 55000 },
-  { month: "Jun", amount: 67000 },
-];
+import { logView, logSaleUpdated, logSaleDeleted, logError, logWarning } from "../utils/activityLogger";
 
 export default function Sales() {
   const navigate = useNavigate();
@@ -54,27 +45,35 @@ export default function Sales() {
   const [fostecProducts, setFostecProducts] = useState([]);
   const [measuringWorks, setMeasuringWorks] = useState([]);
 
-  // Fetch data on component mount
+  // Fetch data on component mount and when page gains focus
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('=== SALES PAGE - FETCHING DATA ===');
+        setLoading(true);
+        
         // Fetch monthly sales data for chart
         const monthlyResponse = await getMonthlySalesData();
+        console.log('Monthly data:', monthlyResponse.data);
         setMonthlyData(monthlyResponse.data);
         
         // Fetch all sales data for table
         const salesResponse = await getSales();
+        console.log('Sales data:', salesResponse.data);
         setSalesData(salesResponse.data);
         
         // Fetch sales statistics
         const statsResponse = await getSalesStatistics();
+        console.log('Stats data:', statsResponse.data);
         setSalesStats(statsResponse.data);
         
         // Fetch group options
         const productsResponse = await getFostecProducts();
+        console.log('Products data:', productsResponse.data);
         setFostecProducts(productsResponse.data);
         
         const worksResponse = await getMeasuringWorks();
+        console.log('Works data:', worksResponse.data);
         setMeasuringWorks(worksResponse.data);
       } catch (error) {
         console.error('Error fetching sales data:', error);
@@ -84,6 +83,18 @@ export default function Sales() {
     };
 
     fetchData();
+    
+    // Refresh data when window gains focus (user returns from AddSale page)
+    const handleFocus = () => {
+      console.log('Window focused - refreshing data');
+      fetchData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Filter sales data based on search term
@@ -116,10 +127,19 @@ export default function Sales() {
   };
 
   const handleDeleteSale = async (saleId) => {
+    // Find the sale data for logging
+    const saleToDelete = salesData.find(sale => sale.id === saleId);
+    
     if (window.confirm('คุณต้องการลบรายการขายนี้ใช่หรือไม่?')) {
       try {
         const { deleteSale } = await import('../services/sales');
         await deleteSale(saleId);
+        
+        // Log the successful deletion
+        if (saleToDelete) {
+          logSaleDeleted(saleToDelete);
+        }
+        
         // Refresh data
         const salesResponse = await getSales();
         setSalesData(salesResponse.data);
@@ -127,6 +147,7 @@ export default function Sales() {
         setSalesStats(statsResponse.data);
       } catch (error) {
         console.error('Error deleting sale:', error);
+        logError(error, 'การลบรายการขาย');
       }
     }
   };
@@ -137,19 +158,42 @@ export default function Sales() {
       const { createSale, updateSale } = await import('../services/sales');
       
       if (editingSale) {
+        // Update existing sale
+        const updatedSaleData = {
+          id: editingSale.id,
+          name: formData.name,
+          bill_number: editingSale.bill_number,
+          price: formData.price
+        };
+        
         await updateSale(editingSale.id, {
           group_work_id: parseInt(formData.group_id),
           name: formData.name,
           price: parseFloat(formData.price),
           description: formData.description
         });
+        
+        // Log the successful update
+        logSaleUpdated(updatedSaleData);
       } else {
+        // Create new sale (this shouldn't happen from Sales page modal, but just in case)
+        const newSaleData = {
+          id: Date.now(),
+          name: formData.name,
+          bill_number: 'N/A',
+          price: formData.price
+        };
+        
         await createSale({
           group_work_id: parseInt(formData.group_id),
           name: formData.name,
           price: parseFloat(formData.price),
           description: formData.description
         });
+        
+        // Log the successful creation
+        const { logSaleCreated } = await import('../utils/activityLogger');
+        logSaleCreated(newSaleData);
       }
       
       // Refresh data
@@ -161,6 +205,7 @@ export default function Sales() {
       setShowModal(false);
     } catch (error) {
       console.error('Error saving sale:', error);
+      logError(error, 'การบันทึกรายการขาย');
     }
   };
 
@@ -262,7 +307,7 @@ export default function Sales() {
                 // Real data
                 filteredSales.map((sale) => (
                   <tr key={sale.id} className="group hover:bg-white/[0.02] transition-all">
-                    <td className="py-4 text-sm font-bold text-blue-400">#SALE-{sale.id}</td>
+                    <td className="py-4 text-sm font-bold text-blue-400">{sale.bill_number || `#SALE-${sale.id}`}</td>
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] text-white">
@@ -351,26 +396,32 @@ export default function Sales() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData.length > 0 ? monthlyData : fallbackSalesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} 
-                    dy={10}
-                  />
-                  <YAxis hide />
-                  <Tooltip 
-                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                    contentStyle={{ backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
-                  />
-                  <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={40}>
-                    {(monthlyData.length > 0 ? monthlyData : fallbackSalesData).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === (monthlyData.length > 0 ? monthlyData.length - 1 : 5) ? '#3b82f6' : '#1e293b'} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                {monthlyData.length > 0 ? (
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis 
+                      dataKey="month" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} 
+                      dy={10}
+                    />
+                    <YAxis hide />
+                    <Tooltip 
+                      cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                      contentStyle={{ backgroundColor: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px" }}
+                    />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={40}>
+                      {monthlyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === monthlyData.length - 1 ? '#3b82f6' : '#1e293b'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-slate-500 text-sm">ไม่มีข้อมูลสถิติยอดขาย</p>
+                  </div>
+                )}
               </ResponsiveContainer>
             )}
           </div>
@@ -390,21 +441,20 @@ export default function Sales() {
           </div>
 
           <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 backdrop-blur-md flex-1">
-            <h3 className="text-white font-bold mb-4">ช่องทางขายยอดนิยม</h3>
+            <h3 className="text-white font-bold mb-4">สถิติการขาย</h3>
             <div className="space-y-4">
-              {[
-                { name: "Online Store", value: "฿ 450k", color: "bg-blue-500" },
-                { name: "Direct Sales", value: "฿ 280k", color: "bg-purple-500" },
-                { name: "Agent", value: "฿ 112k", color: "bg-emerald-500" },
-              ].map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${item.color}`}></div>
-                    <span className="text-sm text-slate-400 font-medium">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-bold text-white">{item.value}</span>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-300">ยอดขายทั้งหมด</span>
+                <span className="text-sm font-bold text-white">฿ {salesStats.total_sales ? parseFloat(salesStats.total_sales).toLocaleString() : '0'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-300">จำนวนรายการ</span>
+                <span className="text-sm font-bold text-white">{salesStats.total_orders || '0'} รายการ</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-300">มูลค่าเฉลี่ย</span>
+                <span className="text-sm font-bold text-white">฿ {salesStats.avg_order_value ? parseFloat(salesStats.avg_order_value).toLocaleString() : '0'}</span>
+              </div>
             </div>
           </div>
         </div>

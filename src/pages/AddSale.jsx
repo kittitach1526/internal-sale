@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { getSales, getSalesStatistics, createSale } from "../services/sales";
-import { getFostecProducts, getFostecProductCategories, getFostecProductTypesByCategory } from "../services/fostec_product";
+import { getFostecProducts } from "../services/fostec_product";
 import { getMeasuringWorks } from "../services/measuring_work";
 import { getProductCategories } from "../services/product_category";
 import { getProductTypes, getProductTypesByCategory } from "../services/product_type";
+import { logSaleCreated, logView, logError } from "../utils/activityLogger";
 
 export default function AddSale() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    bill_number: '',
     group_type: '',
     group_id: '',
     category_id: '',
@@ -20,8 +22,6 @@ export default function AddSale() {
   });
   
   const [fostecProducts, setFostecProducts] = useState([]);
-  const [fostecCategories, setFostecCategories] = useState([]);
-  const [fostecTypes, setFostecTypes] = useState([]);
   const [measuringWorks, setMeasuringWorks] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
@@ -41,16 +41,6 @@ export default function AddSale() {
         const productsData = productsResponse.data || productsResponse;
         console.log('Final Products Data:', productsData);
         setFostecProducts(productsData);
-        
-        // Fetch Fostec Categories
-        try {
-          const categoriesResponse = await getFostecProductCategories();
-          console.log('Fostec Categories:', categoriesResponse.data);
-          setFostecCategories(categoriesResponse.data);
-        } catch (error) {
-          console.warn('Error fetching fostec categories:', error);
-          setFostecCategories([]);
-        }
         
         // Fetch Measuring Works
         try {
@@ -86,28 +76,7 @@ export default function AddSale() {
     fetchGroupOptions();
   }, []);
 
-  // Fetch Fostec types when Fostec product is selected
-  useEffect(() => {
-    if (formData.group_type === 'fostec_product' && formData.group_id) {
-      const fetchFostecTypes = async () => {
-        try {
-          // Get the selected product to find its category
-          const selectedProduct = fostecProducts.find(p => p.id === parseInt(formData.group_id));
-          if (selectedProduct && selectedProduct.category) {
-            const typesResponse = await getFostecProductTypesByCategory(selectedProduct.category);
-            setFostecTypes(typesResponse.data);
-          }
-        } catch (error) {
-          console.error('Error fetching fostec product types:', error);
-        }
-      };
-
-      fetchFostecTypes();
-    } else {
-      setFostecTypes([]);
-    }
-  }, [formData.group_type, formData.group_id, fostecProducts]);
-
+  
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
@@ -119,19 +88,94 @@ export default function AddSale() {
     e.preventDefault();
     setLoading(true);
     
+    console.log('=== ADD SALE DEBUG ===');
+    console.log('FormData:', formData);
+    
+    // Form validation
+    if (!formData.bill_number.trim()) {
+      alert('กรุณากรอกเลขที่บิล');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.group_type) {
+      alert('กรุณาเลือกประเภทกลุ่ม');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.group_id) {
+      alert('กรุณาเลือกรายการในกลุ่ม');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.name.trim()) {
+      alert('กรุณากรอกชื่อรายการ');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      alert('กรุณากรอกราคาให้ถูกต้อง');
+      setLoading(false);
+      return;
+    }
+    
+    // IMPORTANT: group_work_id must reference group_work table
+    // Only measuring_work IDs are valid for group_work_id
+    let validGroupWorkId;
+    if (formData.group_type === 'measuring_work') {
+      validGroupWorkId = parseInt(formData.group_id);
+    } else if (formData.group_type === 'fostec_product') {
+      // For fostec_product, we need to map to a valid group_work_id
+      // Use the first measuring_work ID as fallback (id: 1)
+      validGroupWorkId = 1;
+      console.log('Using fallback group_work_id for fostec_product:', validGroupWorkId);
+    } else {
+      alert('ประเภทกลุ่มไม่ถูกต้อง');
+      setLoading(false);
+      return;
+    }
+    
+    const parsedPrice = parseFloat(formData.price);
+    
+    console.log('Final group_work_id:', validGroupWorkId);
+    console.log('Parsed price:', parsedPrice);
+    
     try {
-      await createSale({
-        group_work_id: parseInt(formData.group_id),
+      const saleData = {
+        bill_number: formData.bill_number.trim(),
+        group_work_id: validGroupWorkId,
+        name: formData.name.trim(),
+        price: parsedPrice,
+        description: formData.description.trim()
+      };
+      
+      console.log('Sending data:', saleData);
+      const result = await createSale(saleData);
+      console.log('Create sale result:', result);
+      
+      alert('เพิ่มรายการขายสำเร็จ!');
+      
+      // Log the successful sale creation
+      const saleLogData = {
+        id: Date.now(), // temporary ID, will be replaced with real ID from server
         name: formData.name,
-        price: parseFloat(formData.price),
-        description: formData.description
-      });
+        bill_number: formData.bill_number,
+        price: formData.price
+      };
+      logSaleCreated(saleLogData);
       
       // Navigate back to Sales page
       navigate('/sales');
     } catch (error) {
       console.error('Error creating sale:', error);
-      alert('เกิดข้อผิดพลาดในการเพิ่มข้อมูล กรุณาลองใหม่');
+      
+      // Log the error
+      logError(error, 'การเพิ่มรายการขาย');
+      
+      alert('เกิดข้อผิดพลาดในการเพิ่มข้อมูล: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
@@ -169,6 +213,22 @@ export default function AddSale() {
       {/* Form */}
       <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 backdrop-blur-md">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* เลขที่บิล */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              เลขที่บิล <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              name="bill_number"
+              value={formData.bill_number}
+              onChange={handleInputChange}
+              required
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-blue-500/50 focus:outline-none transition-all"
+              placeholder="กรอกเลขที่บิล"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* ชื่อรายการ */}
             <div>
@@ -263,29 +323,7 @@ export default function AddSale() {
               </div>
             )}
 
-          {/* ประเภทสินค้า (แสดงเมื่อเลือก Fostec Product) */}
-          {formData.group_type === 'fostec_product' && formData.group_id && (
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                ประเภทสินค้า <span className="text-red-400">*</span>
-              </label>
-              <select
-                name="type_id"
-                value={formData.type_id}
-                onChange={handleInputChange}
-                required
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-blue-500/50 focus:outline-none transition-all"
-              >
-                <option value="">เลือกประเภทสินค้า</option>
-                {(fostecTypes || []).map(type => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
+          
           {/* ประเภทสินค้า (แสดงเมื่อเลือก Product Category) */}
           {formData.group_type === 'product_category' && formData.group_id && (
             <div>

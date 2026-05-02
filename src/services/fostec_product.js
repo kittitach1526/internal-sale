@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://sales-api.sphx-dev.online/api'
+  baseURL: 'http://localhost:8000/api'
 });
 
 export const getFostecProducts = async () => {
@@ -14,19 +14,9 @@ export const getFostecProducts = async () => {
   }
 };
 
-export const getFostecProductById = async (id) => {
+export const createFostecProduct = async (id, name) => {
   try {
-    const response = await API.get(`/fostec-products/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching fostec product:', error);
-    throw error;
-  }
-};
-
-export const createFostecProduct = async (productData) => {
-  try {
-    const response = await API.post('/fostec-products', productData);
+    const response = await API.post(`/fostec_product?id=${id}&name=${name}`);
     return response.data;
   } catch (error) {
     console.error('Error creating fostec product:', error);
@@ -34,42 +24,12 @@ export const createFostecProduct = async (productData) => {
   }
 };
 
-export const updateFostecProduct = async (id, productData) => {
-  try {
-    const response = await API.put(`/fostec-products/${id}`, productData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating fostec product:', error);
-    throw error;
-  }
-};
-
 export const deleteFostecProduct = async (id) => {
   try {
-    const response = await API.delete(`/fostec-products/${id}`);
+    const response = await API.delete(`/fostec_product/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting fostec product:', error);
-    throw error;
-  }
-};
-
-export const getFostecProductCategories = async () => {
-  try {
-    const response = await API.get('/fostec_product/categories');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching fostec product categories:', error);
-    throw error;
-  }
-};
-
-export const getFostecProductTypesByCategory = async (category) => {
-  try {
-    const response = await API.get(`/fostec_product/types/${encodeURIComponent(category)}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching fostec product types by category:', error);
     throw error;
   }
 };

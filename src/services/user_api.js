@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://sales-api.sphx-dev.online/api",
+  baseURL: "http://localhost:8000/api",
 });
 
 // ===== USERS =====
@@ -11,8 +11,8 @@ export const getUser = (id) => API.get(`/users/${id}`);
 
 export const createUser = (userData) => {
   const params = new URLSearchParams();
-  // Generate a random ID for new user
-  const newId = Math.floor(Math.random() * 1000) + 100;
+  // Generate auto ID to prevent duplicates
+  const newId = Math.floor(Math.random() * 10000) + 1000;
   params.append('id', newId);
   params.append('name', userData.name);
   params.append('username', userData.username);

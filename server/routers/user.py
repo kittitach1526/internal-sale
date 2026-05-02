@@ -42,7 +42,9 @@ def update_user(user_id: int, name: str, email: str, role: str):
 # DELETE
 @router.delete("/{user_id}")
 def delete_user(user_id: int):
+    print(f"Router: Attempting to delete user {user_id}")
     deleted = delete_user_db(user_id)
+    print(f"Router: Delete result: {deleted}")
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "Deleted"}

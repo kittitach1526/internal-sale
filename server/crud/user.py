@@ -1,4 +1,4 @@
-from .database import *
+from .database import get_conn, get_cursor
 
 def create_user_db(id, name, username, password, group_user):
     conn, cur = get_cursor(dict_mode=True)
@@ -57,21 +57,26 @@ def update_user_db(user_id, name, email, role):
         conn.close()
 
 def delete_user_db(user_id):
-    conn, cur = get_cursor(dict_mode=True)
+    conn = get_conn()
+    cur = conn.cursor()
     try:
         # First check if user exists and is active
         cur.execute("SELECT id FROM users WHERE id = %s AND status = 'active';", (user_id,))
         user_exists = cur.fetchone()
         
+        print(f"Debug: Checking user ID {user_id}, exists: {user_exists}")
+        
         if not user_exists:
+            print(f"Debug: User {user_id} not found or not active")
             return False
             
         # Update user status to inactive
         cur.execute("UPDATE users SET status = 'inactive' WHERE id = %s;", (user_id,))
         conn.commit()
+        print(f"Debug: Successfully updated user {user_id} to inactive")
         return True
     except Exception as e:
-        print(e)
+        print(f"Debug: Error in delete_user_db: {e}")
         return False
     finally:
         cur.close()

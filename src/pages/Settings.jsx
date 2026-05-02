@@ -15,6 +15,7 @@ import { getUsers, createUser, updateUser, deleteUser } from "../services/user_a
 import { getProductCategories, getProductCategories2, getFostecProducts, getMeasuringWorks, createFostecProduct, deleteFostecProduct, updateFostecProduct, createMeasuringWork, deleteMeasuringWork, updateMeasuringWork } from "../services/productService";
 import { getGroupCost, createGroupCost, deleteGroupCost, updateGroupCost } from "../services/group_cost";
 import { isAdminOrManager } from "../utils/auth";
+import { logView, logUserAction, logProductAction, logExpenseAction, logSettingsAction, logError } from "../utils/activityLogger";
 
 
 
@@ -84,7 +85,7 @@ export default function Settings() {
   // --- Handler Functions ---
   const handleAddExpense = () => {
     setEditingExpense(null);
-    setExpenseForm({ id: "", name: "" });
+    setExpenseForm({ name: "" });
     setShowExpenseModal(true);
   };
 
@@ -95,17 +96,27 @@ export default function Settings() {
   };
 
   const handleDeleteExpense = (expense) => {
+    console.log('🔍 Debug: handleDeleteExpense called with:', expense);
     if (window.confirm(`คุณต้องการลบ "${expense.name}" ใช่หรือไม่?`)) {
       deleteGroupCost(expense.id)
         .then(() => {
           setExpenseCategories(expenseCategories.filter(cat => cat.id !== expense.id));
+          
+          console.log('🔍 Debug: About to log expense deletion');
+          // Log the successful deletion
+          logExpenseAction('ลบหมวดหมู่ค่าใช้จ่าย', expense.name, 'delete')
+            .then(() => console.log('✅ Debug: Expense deletion logged successfully'))
+            .catch(err => console.error('❌ Debug: Error logging expense deletion:', err));
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การลบหมวดหมู่ค่าใช้จ่าย');
+        });
     }
   };
 
   const handleSaveExpense = () => {
-    if (!expenseForm.name.trim() || !expenseForm.id.trim()) return;
+    if (!expenseForm.name.trim()) return;
 
     if (editingExpense) {
       // Update existing expense
@@ -115,23 +126,37 @@ export default function Settings() {
             cat.id === editingExpense.id ? { ...cat, name: expenseForm.name } : cat
           ));
           setShowExpenseModal(false);
+          
+          // Log the successful update
+          logExpenseAction('แก้ไขหมวดหมู่ค่าใช้จ่าย', expenseForm.name, 'update');
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การแก้ไขหมวดหมู่ค่าใช้จ่าย');
+        });
     } else {
-      // Add new expense
-      createGroupCost(parseInt(expenseForm.id), expenseForm.name)
-        .then(() => {
-          setExpenseCategories([...expenseCategories, { id: parseInt(expenseForm.id), name: expenseForm.name }]);
+      // Add new expense with auto-generated ID
+      createGroupCost(expenseForm.name)
+        .then((response) => {
+          // Add the new expense with the ID returned from the server
+          const newExpense = response.data || { id: Date.now(), name: expenseForm.name };
+          setExpenseCategories([...expenseCategories, newExpense]);
           setShowExpenseModal(false);
+          
+          // Log the successful creation
+          logExpenseAction('เพิ่มหมวดหมู่ค่าใช้จ่าย', expenseForm.name, 'create');
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การเพิ่มหมวดหมู่ค่าใช้จ่าย');
+        });
     }
   };
 
   // Product Category Handlers
   const handleAddProduct = (type) => {
     setEditingProduct(null);
-    setProductForm({ id: "", name: "" });
+    setProductForm({ name: "" });
     setProductType(type);
     setShowProductModal(true);
   };
@@ -164,6 +189,12 @@ export default function Settings() {
               const updatedCategories = { ...productCategories };
               updatedCategories.FOSTEC = productCategories.FOSTEC.filter(item => item !== product);
               setProductCategories(updatedCategories);
+              
+              // Log the successful deletion
+              console.log('🔍 Debug: About to log FOSTEC product deletion');
+              logProductAction('ลบสินค้า Fostec', product, 'delete')
+                .then(() => console.log('✅ Debug: FOSTEC product deletion logged successfully'))
+                .catch(err => console.error('❌ Debug: Error logging FOSTEC product deletion:', err));
             })
             .catch((err) => {
               console.error('❌ Debug - Error deleting FOSTEC product:', err);
@@ -189,6 +220,12 @@ export default function Settings() {
               const updatedCategories = { ...productCategories2 };
               updatedCategories["งานตรวจรับ"] = productCategories2["งานตรวจรับ"].filter(item => item !== product);
               setProductCategories2(updatedCategories);
+              
+              // Log the successful deletion
+              console.log('🔍 Debug: About to log measuring work deletion');
+              logProductAction('ลบงานตรวจวัด', product, 'delete')
+                .then(() => console.log('✅ Debug: Measuring work deletion logged successfully'))
+                .catch(err => console.error('❌ Debug: Error logging measuring work deletion:', err));
             })
             .catch((err) => {
               console.error('❌ Debug - Error deleting measuring work:', err);
@@ -204,7 +241,7 @@ export default function Settings() {
   };
 
   const handleSaveProduct = () => {
-    if (!productForm.name.trim() || !productForm.id.trim()) return;
+    if (!productForm.name.trim()) return;
 
     if (productType === "FOSTEC") {
       if (editingProduct) {
@@ -215,16 +252,29 @@ export default function Settings() {
         );
         setProductCategories(updatedCategories);
         setShowProductModal(false);
+        
+        // Log the successful update
+        logProductAction('แก้ไขสินค้า Fostec', productForm.name, 'update');
       } else {
-        // Add new FOSTEC product
-        createFostecProduct(productForm.id, productForm.name)
-          .then(() => {
+        // Add new FOSTEC product with auto-generated ID
+        createFostecProduct(productForm.name)
+          .then((response) => {
             const updatedCategories = { ...productCategories };
             updatedCategories.FOSTEC = [...(updatedCategories.FOSTEC || []), productForm.name];
+            // Refresh the full product list to get the new item with ID
+            getFostecProducts()
+              .then((data) => setFostecProducts(data))
+              .catch((err) => console.error(err));
             setProductCategories(updatedCategories);
             setShowProductModal(false);
+            
+            // Log the successful creation
+            logProductAction('เพิ่มสินค้า Fostec', productForm.name, 'create');
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+            logError(err, 'การเพิ่มสินค้า Fostec');
+          });
       }
     } else {
       // Measuring Work
@@ -236,16 +286,29 @@ export default function Settings() {
         );
         setProductCategories2(updatedCategories);
         setShowProductModal(false);
+        
+        // Log the successful update
+        logProductAction('แก้ไขงานตรวจวัด', productForm.name, 'update');
       } else {
-        // Add new measuring work
-        createMeasuringWork(productForm.id, productForm.name)
-          .then(() => {
+        // Add new measuring work with auto-generated ID
+        createMeasuringWork(productForm.name)
+          .then((response) => {
             const updatedCategories = { ...productCategories2 };
             updatedCategories["งานตรวจรับ"] = [...(updatedCategories["งานตรวจรับ"] || []), productForm.name];
+            // Refresh the full work list to get the new item with ID
+            getMeasuringWorks()
+              .then((data) => setMeasuringWorks(data))
+              .catch((err) => console.error(err));
             setProductCategories2(updatedCategories);
             setShowProductModal(false);
+            
+            // Log the successful creation
+            logProductAction('เพิ่มงานตรวจวัด', productForm.name, 'create');
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+            logError(err, 'การเพิ่มงานตรวจวัด');
+          });
       }
     }
   };
@@ -257,22 +320,32 @@ export default function Settings() {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
-    setUserForm({ id: user.id.toString(), name: user.name, email: user.email, role: user.role });
+    setUserForm({ name: user.name, email: user.email, role: user.role });
     setShowUserModal(true);
   };
 
   const handleDeleteUser = (user) => {
+    console.log('🔍 Debug: handleDeleteUser called with:', user);
     if (window.confirm(`คุณต้องการลบผู้ใช้ "${user.name}" ใช่หรือไม่?`)) {
       deleteUser(user.id)
         .then(() => {
           setUsers(users.filter(u => u.id !== user.id));
+          
+          console.log('🔍 Debug: About to log user deletion');
+          // Log the successful deletion
+          logUserAction('ลบผู้ใช้', user, 'delete')
+            .then(() => console.log('✅ Debug: User deletion logged successfully'))
+            .catch(err => console.error('❌ Debug: Error logging user deletion:', err));
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การลบผู้ใช้');
+        });
     }
   };
 
   const handleSaveUser = () => {
-    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role.trim() || !userForm.id.trim()) return;
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role.trim()) return;
 
     if (editingUser) {
       // Update existing user
@@ -282,16 +355,35 @@ export default function Settings() {
             u.id === editingUser.id ? { ...u, name: userForm.name, email: userForm.email, role: userForm.role } : u
           ));
           setShowUserModal(false);
+          
+          // Log the successful update
+          logUserAction('แก้ไขผู้ใช้', { ...editingUser, name: userForm.name, email: userForm.email, role: userForm.role }, 'update');
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การแก้ไขผู้ใช้');
+        });
     } else {
-      // Add new user
-      createUser({ id: parseInt(userForm.id), name: userForm.name, email: userForm.email, role: userForm.role })
+      // Add new user with auto-generated ID
+      const userData = {
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role,
+        username: userForm.email.split('@')[0], // Generate username from email
+        password: 'default123' // Default password
+      };
+      createUser(userData)
         .then((res) => {
-          setUsers([...users, { ...res.data, id: parseInt(userForm.id), name: userForm.name, email: userForm.email, role: userForm.role }]);
+          setUsers([...users, res.data]);
           setShowUserModal(false);
+          
+          // Log the successful creation
+          logUserAction('เพิ่มผู้ใช้', { ...userData, id: res.data.id }, 'create');
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          logError(err, 'การเพิ่มผู้ใช้');
+        });
     }
   };
 
@@ -420,7 +512,7 @@ export default function Settings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
                       <div
-                        key={index}
+                        key={`${group}-${item}-${index}`}
                         className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/10 rounded-xl"
                       >
                         <div className="flex flex-col">
@@ -466,7 +558,7 @@ export default function Settings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {items.map((item, index) => (
                       <div
-                        key={index}
+                        key={`${group}-${item}-${index}`}
                         className="flex items-center justify-between px-5 py-3 bg-white/5 border border-white/10 rounded-xl"
                       >
                         <div className="flex flex-col">
@@ -511,7 +603,7 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {expenseCategories.map((cat, index) => (
                   <div
-                    key={cat.id || index} // แนะนำให้ใช้ cat.id เป็น key แทน index เพื่อ Performance ที่ดีกว่า
+                    key={`expense-${cat.id || index}`} // Ensure unique key with prefix
                     className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl"
                   >
                     <div className="flex items-center gap-3">
@@ -566,19 +658,6 @@ export default function Settings() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  ID
-                </label>
-                <input
-                  type="number"
-                  value={expenseForm.id}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, id: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
-                  placeholder="กรอก ID"
-                  disabled={!!editingExpense}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
                   ชื่อหมวดหมู่
                 </label>
                 <input
@@ -627,19 +706,6 @@ export default function Settings() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  ID
-                </label>
-                <input
-                  type="number"
-                  value={productForm.id}
-                  onChange={(e) => setProductForm({ ...productForm, id: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
-                  placeholder="กรอก ID"
-                  disabled={!!editingProduct}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
                   ชื่อหมวดหมู่
                 </label>
                 <input
@@ -686,19 +752,6 @@ export default function Settings() {
               </button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  ID
-                </label>
-                <input
-                  type="number"
-                  value={userForm.id}
-                  onChange={(e) => setUserForm({ ...userForm, id: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:bg-white/10"
-                  placeholder="กรอก ID"
-                  disabled={!!editingUser}
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   ชื่อผู้ใช้

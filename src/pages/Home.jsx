@@ -88,7 +88,7 @@ function ChartCard({ title, income, expense, color = "#3b82f6", data = [] }) {
       </div>
 
       <div className="relative h-48 w-full mt-2">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={192}>
           <BarChart data={data}>
             <defs>
               <linearGradient id={`glow-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
@@ -387,7 +387,23 @@ export default function Home() {
         const salesCount = filteredSales.length;
         
         // คำนวณค่าใช้จ่ายรวม
-        const expenseTotal = filteredCosts.reduce((sum, cost) => sum + parseFloat(cost.amount || 0), 0);
+        console.log('🔍 Debug: All costs from API:', allCosts);
+        console.log('🔍 Debug: Sample cost structure:', allCosts[0]);
+        console.log('🔍 Debug: Filtered costs:', filteredCosts);
+        
+        // Check if cost has amount field
+        if (filteredCosts.length > 0) {
+          console.log('🔍 Debug: First cost fields:', Object.keys(filteredCosts[0]));
+          console.log('🔍 Debug: First cost amount value:', filteredCosts[0].amount);
+          console.log('🔍 Debug: First cost price value:', filteredCosts[0].price);
+        }
+        
+        const expenseTotal = filteredCosts.reduce((sum, cost) => {
+          const amount = parseFloat(cost.amount || cost.price || 0);
+          console.log('🔍 Debug: Processing cost:', cost, 'Amount:', amount);
+          return sum + amount;
+        }, 0);
+        console.log('🔍 Debug: Calculated expense total:', expenseTotal);
         
         // สร้างข้อมูลกราฟจากข้อมูลจริง
         const newChartData = generateChartData(filteredCosts, filteredSales, timeRange);
