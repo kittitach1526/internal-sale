@@ -1,18 +1,19 @@
 from .database import *
 
-def create_sales(group_work_id, name, price, description):
+def create_sales(bill_number, group_work_id, name, price, description):
     conn, cur = get_cursor(dict_mode=True)
     try:
         print(f"=== CREATE SALES DEBUG ===")
+        print(f"bill_number: {bill_number} (type: {type(bill_number)})")
         print(f"group_work_id: {group_work_id} (type: {type(group_work_id)})")
         print(f"name: {name} (type: {type(name)})")
         print(f"price: {price} (type: {type(price)})")
         print(f"description: {description} (type: {type(description)})")
         
         cur.execute("""
-            INSERT INTO sales (group_work_id, name, price, description)
-            VALUES (%s, %s, %s, %s);
-        """, (group_work_id, name, int(price), description))
+            INSERT INTO sales (bill_number, group_work_id, name, price, description)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (bill_number, group_work_id, name, int(price), description))
         conn.commit()
         print("Sales created successfully!")
         return True
@@ -30,7 +31,7 @@ def get_all_sales():
     conn, cur = get_cursor(dict_mode=True)
     
     cur.execute("""
-        SELECT s.id, s.group_work_id, s.name, s.price, s.description, s.created_at, s.status,
+        SELECT s.id, s.bill_number, s.group_work_id, s.name, s.price, s.description, s.created_at, s.status,
                gw.name as group_work_name
         FROM sales s
         LEFT JOIN group_work gw ON s.group_work_id = gw.id

@@ -18,12 +18,14 @@ router = APIRouter(
 )
 
 class SalesCreate(BaseModel):
+    bill_number: str
     group_work_id: int
     name: str
     price: float
     description: str = ""
 
 class SalesUpdate(BaseModel):
+    bill_number: str = ""
     group_work_id: int
     name: str
     price: float
@@ -32,7 +34,7 @@ class SalesUpdate(BaseModel):
 # CREATE
 @router.post("/")
 def create_sales_endpoint(sales: SalesCreate):
-    return create_sales(sales.group_work_id, sales.name, sales.price, sales.description)
+    return create_sales(sales.bill_number, sales.group_work_id, sales.name, sales.price, sales.description)
 
 # GET ALL
 @router.get("/")
