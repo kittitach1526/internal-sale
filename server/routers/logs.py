@@ -138,6 +138,32 @@ async def create_log(log: LogEntry):
 
         
 
+        # Extract user_id from user string (format: "Name (email)")
+
+        user_id = 1  # Default to admin
+
+        if log.user and '(' in log.user and ')' in log.user:
+
+            try:
+
+                user_email = log.user.split('(')[1].split(')')[0].strip()
+
+                # Query to get user_id from email
+
+                cursor.execute("SELECT id FROM users WHERE email = %s", (user_email,))
+
+                user_result = cursor.fetchone()
+
+                if user_result:
+
+                    user_id = user_result[0]
+
+            except:
+
+                pass  # Fallback to user_id = 1
+
+        
+
         cursor.execute('''
 
             INSERT INTO logs (user_id, action)
@@ -146,7 +172,7 @@ async def create_log(log: LogEntry):
 
             RETURNING id
 
-        ''', (1, log.action))  # user_id=1 ชั่วคราว จะปรับให้ใช้ user จริงภายหลัง
+        ''', (user_id, log.action))  
 
         
 

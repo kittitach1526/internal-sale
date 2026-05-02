@@ -33,11 +33,11 @@ def get_user(user_name: str):
 
 # UPDATE
 @router.put("/{user_id}")
-def update_user(user_id: int, name: str, age: int):
-    updated = update_user_db(user_id, name, age)
+def update_user(user_id: int, name: str, email: str, role: str):
+    updated = update_user_db(user_id, name, email, role)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
-    return updated
+    return {"message": "Updated"}
 
 # DELETE
 @router.delete("/{user_id}")
